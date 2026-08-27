@@ -62,7 +62,7 @@ function MockHeader({
         ) : null}
       </div>
       <div className="text-xs uppercase tracking-widest opacity-80">
-        Mock agency portal
+        Agency portal
       </div>
       <h1 className="text-xl font-semibold">{title}</h1>
       {subtitle ? <p className="text-sm opacity-90">{subtitle}</p> : null}

@@ -1,11 +1,13 @@
 export const ACCURACY_THRESHOLD_M = 80;
 
-export function captureTruth(telegramLocation) {
+export function captureTruth(telegramLocation, opts = {}) {
   const accuracy =
     telegramLocation.horizontal_accuracy == null
       ? null
       : Number(telegramLocation.horizontal_accuracy);
-  const source = accuracy != null ? "telegram_current" : "telegram_picked";
+  const source =
+    opts.source ||
+    (accuracy != null ? "telegram_current" : "telegram_picked");
   return {
     lat: Number(telegramLocation.latitude),
     lng: Number(telegramLocation.longitude),
@@ -35,7 +37,7 @@ export function captureGeocodedTruth({ lat, lng, source = "text_geocode", landma
 
 export function needsMapPick(truth) {
   return (
-    truth.source === "telegram_current" &&
+    (truth.source === "telegram_current" || truth.source === "whatsapp_pin") &&
     truth.accuracy_m != null &&
     truth.accuracy_m > ACCURACY_THRESHOLD_M
   );

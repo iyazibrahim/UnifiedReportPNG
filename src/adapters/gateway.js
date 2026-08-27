@@ -7,7 +7,7 @@ export function createGateway(adapters) {
         throw new Error("Cannot dispatch until location is confirmed");
       }
       if (!(await resolveToggle("mockDispatchEnabled"))) {
-        throw new Error("Mock dispatch is disabled in Settings");
+        throw new Error("Agency dispatch is disabled in Settings");
       }
       const agencyId = caseDoc.jurisdiction?.agencyId;
       if (!(await resolveToggle(agencyId))) {

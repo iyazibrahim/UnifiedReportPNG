@@ -3,8 +3,10 @@ import mongoose from "mongoose";
 const caseSchema = new mongoose.Schema(
   {
     ref: { type: String, unique: true, index: true },
-    channel: { type: String, default: "telegram" },
+    channel: { type: String, default: "telegram", index: true },
     reporter: {
+      channelUserId: String,
+      /** @deprecated prefer channelUserId; kept for Telegram compatibility */
       telegramUserId: String,
       displayName: String,
     },
@@ -34,3 +36,17 @@ const caseSchema = new mongoose.Schema(
 );
 
 export const Case = mongoose.model("Case", caseSchema);
+
+/** Query filter for a reporter on a given channel (supports legacy telegramUserId). */
+export function reporterFilter(channel, channelUserId) {
+  const id = String(channelUserId);
+  if (channel === "telegram") {
+    return {
+      $or: [
+        { channel: "telegram", "reporter.channelUserId": id },
+        { "reporter.telegramUserId": id },
+      ],
+    };
+  }
+  return { channel, "reporter.channelUserId": id };
+}

@@ -10,7 +10,7 @@ export function loadConfig(env = process.env) {
     openRouterKey: env.OPENROUTER_API_KEY || "",
     openRouterModel: env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
     nominatimUserAgent:
-      env.NOMINATIM_USER_AGENT || "UnifiedReportPenang/1.0 (mvp)",
+      env.NOMINATIM_USER_AGENT || "UnifiedReportPenang/1.0",
     opsUser: env.OPS_USER || "ops",
     opsPassword: env.OPS_PASSWORD || "changeme",
     jwtSecret: env.JWT_SECRET || "dev-jwt-secret-change-me",

@@ -16,7 +16,7 @@ async function nominatimHeaders(userAgent, envProcess) {
       await resolveConfig(
         "nominatimUserAgent",
         envProcess || process.env,
-        "UnifiedReportPenang/1.0 (mvp)"
+        "UnifiedReportPenang/1.0"
       )
     ).value;
   return {

@@ -15,7 +15,7 @@ const links = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/cases", label: "Cases", icon: FileText },
   { to: "/admin/settings", label: "Settings", icon: Settings },
-  { to: "/admin/mock-portals", label: "Mock portals", icon: ExternalLink },
+  { to: "/admin/portals", label: "Agency portals", icon: ExternalLink },
 ];
 
 export function AdminLayout() {

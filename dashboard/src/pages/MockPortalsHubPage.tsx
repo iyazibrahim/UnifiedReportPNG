@@ -38,9 +38,9 @@ export function MockPortalsHubPage() {
   return (
     <div className="flex flex-col gap-8">
       <div>
-        <h1 className="text-2xl font-semibold tracking-tight">Mock portals</h1>
+        <h1 className="text-2xl font-semibold tracking-tight">Agency portals</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--color-muted-foreground)]">
-          Pilih portal agensi untuk melihat inbox tiket simulasi.
+          Pilih portal agensi untuk melihat inbox tiket.
         </p>
       </div>
 
@@ -50,7 +50,7 @@ export function MockPortalsHubPage() {
           return (
             <Link
               key={p.id}
-              to={`/mock/${p.id}`}
+              to={`/portals/${p.id}`}
               className={cn(
                 "group relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm transition duration-300",
                 "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",

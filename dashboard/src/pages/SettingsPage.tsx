@@ -37,10 +37,11 @@ const TOGGLE_GROUPS: Array<{
     title: "Channels & classification",
     keys: [
       { key: "telegramBotEnabled", label: "Telegram bot" },
+      { key: "whatsappBotEnabled", label: "WhatsApp bot" },
       { key: "llmClassificationEnabled", label: "LLM classification" },
       { key: "keywordFallbackEnabled", label: "Keyword fallback" },
       { key: "nominatimEnabled", label: "Nominatim reverse geocode" },
-      { key: "mockDispatchEnabled", label: "Mock agency dispatch" },
+      { key: "mockDispatchEnabled", label: "Agency dispatch" },
       { key: "abuseGuardsEnabled", label: "Abuse rate limits" },
     ],
   },
@@ -59,8 +60,10 @@ const TOGGLE_GROUPS: Array<{
 const CONFIG_FIELDS = [
   { key: "openRouterModel", label: "OpenRouter model" },
   { key: "telegramWebhookUrl", label: "Telegram webhook URL" },
+  { key: "publicBaseUrl", label: "Public base URL (for WhatsApp webhook)" },
+  { key: "whatsappPhoneNumberId", label: "WhatsApp phone number ID" },
   { key: "nominatimUserAgent", label: "Nominatim user agent" },
-  { key: "mockPortalPin", label: "Mock portal PIN (optional)" },
+  { key: "mockPortalPin", label: "Portal PIN (optional)" },
   { key: "abuseMaxPerHour", label: "Abuse max per hour" },
   { key: "abuseMaxPerDay", label: "Abuse max per day" },
   { key: "abuseCooldownSec", label: "Abuse cooldown (sec)" },
@@ -69,12 +72,15 @@ const CONFIG_FIELDS = [
 const SECRET_FIELDS = [
   { key: "telegramBotToken", label: "Telegram bot token" },
   { key: "telegramWebhookSecret", label: "Telegram webhook secret" },
+  { key: "whatsappAccessToken", label: "WhatsApp access token" },
+  { key: "whatsappAppSecret", label: "WhatsApp app secret" },
+  { key: "whatsappVerifyToken", label: "WhatsApp verify token" },
   { key: "openRouterApiKey", label: "OpenRouter API key" },
-  { key: "pearlApiKey", label: "Pearl API key (future)" },
-  { key: "aspireApiKey", label: "Aspire API key (future)" },
-  { key: "myjalanApiKey", label: "MyJalan API key (future)" },
-  { key: "pbappApiKey", label: "PBAPP API key (future)" },
-  { key: "epintasApiKey", label: "ePINTAS API key (future)" },
+  { key: "pearlApiKey", label: "Pearl API key" },
+  { key: "aspireApiKey", label: "Aspire API key" },
+  { key: "myjalanApiKey", label: "MyJalan API key" },
+  { key: "pbappApiKey", label: "PBAPP API key" },
+  { key: "epintasApiKey", label: "ePINTAS API key" },
 ];
 
 export function SettingsPage() {
@@ -224,6 +230,17 @@ export function SettingsPage() {
                 </p>
               </div>
             ))}
+            <Alert>
+              <AlertTitle>WhatsApp webhook URL</AlertTitle>
+              <AlertDescription>
+                {(config.publicBaseUrl || "").replace(/\/$/, "")
+                  ? `${String(config.publicBaseUrl).replace(/\/$/, "")}/whatsapp/webhook`
+                  : "Set Public base URL above — then paste {base}/whatsapp/webhook into Meta Developer Console."}
+                {data.secrets.whatsappVerifyToken?.configured
+                  ? " Verify token is already configured (see API keys)."
+                  : " A verify token is auto-generated on first boot if left empty."}
+              </AlertDescription>
+            </Alert>
           </CardContent>
         </Card>
       ) : null}

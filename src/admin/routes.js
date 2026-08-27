@@ -7,7 +7,7 @@ import {
 } from "../settings/service.js";
 import { loginAdmin, requireAdminAuth } from "./auth.js";
 import { AGENCIES, CATEGORIES } from "../jurisdiction/categories.js";
-import { fetchTelegramFile } from "./telegramMedia.js";
+import { fetchCasePhoto } from "./telegramMedia.js";
 import { subscribeCaseCreated } from "./events.js";
 
 function ticketBucket(status) {
@@ -214,7 +214,7 @@ export function createAdminRouter(config) {
       if (!allowed.includes(fileId)) {
         return res.status(403).json({ error: "Photo not on this case" });
       }
-      const { buffer, contentType } = await fetchTelegramFile(fileId);
+      const { buffer, contentType } = await fetchCasePhoto(fileId);
       res.setHeader("Content-Type", contentType);
       res.setHeader("Cache-Control", "private, max-age=3600");
       res.send(buffer);

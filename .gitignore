@@ -8,3 +8,5 @@ coverage/
 dashboard/dist/
 dashboard/node_modules/
 data/landmarks.generated.json
+data/media/*
+!data/media/.gitkeep

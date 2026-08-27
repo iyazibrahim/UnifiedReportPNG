@@ -1,14 +1,9 @@
 import { InlineKeyboard, Keyboard } from "grammy";
+import { MENU } from "../intake/buttons.js";
+
+export { MENU };
 
 /** Persistent reply menu when idle / not asking for GPS. */
-export const MENU = {
-  NEW: "Aduan Baharu",
-  STATUS: "Semak Aduan",
-  HELP: "Bantuan",
-  BACK: "Kembali ke menu",
-  GPS: "Kongsi lokasi GPS",
-};
-
 export function mainMenuKeyboard() {
   return new Keyboard()
     .text(MENU.NEW)

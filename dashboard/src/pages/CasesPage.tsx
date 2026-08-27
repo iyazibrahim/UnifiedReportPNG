@@ -167,7 +167,7 @@ export function OverviewPage() {
           <CardHeader>
             <CardTitle>Agency routing flow</CardTitle>
             <p className="text-xs font-normal text-[var(--color-muted-foreground)]">
-              Citizen reports distributed to agency mock portals
+              Citizen reports distributed to agency portals
             </p>
           </CardHeader>
           <CardContent>

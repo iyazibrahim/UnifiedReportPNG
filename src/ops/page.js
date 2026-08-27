@@ -65,7 +65,7 @@ export function renderOpsPage(cases) {
 <body>
   <header>
     <h1>Unified Report Penang</h1>
-    <p>Senarai kes MVP — bukti routing ke mock Pearl / Aspire / MyJalan / PBAPP / ePINTAS</p>
+    <p>Senarai kes — routing ke Pearl / Aspire / MyJalan / PBAPP / ePINTAS</p>
   </header>
   <main>
     <table>

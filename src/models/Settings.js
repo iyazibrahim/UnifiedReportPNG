@@ -2,6 +2,7 @@ import mongoose from "mongoose";
 
 const defaultToggles = () => ({
   telegramBotEnabled: true,
+  whatsappBotEnabled: true,
   llmClassificationEnabled: true,
   keywordFallbackEnabled: true,
   nominatimEnabled: true,
@@ -22,6 +23,8 @@ const settingsSchema = new mongoose.Schema(
       openRouterModel: { type: String, default: "" },
       nominatimUserAgent: { type: String, default: "" },
       telegramWebhookUrl: { type: String, default: "" },
+      publicBaseUrl: { type: String, default: "" },
+      whatsappPhoneNumberId: { type: String, default: "" },
       mockPortalPin: { type: String, default: "" },
       abuseMaxPerHour: { type: String, default: "5" },
       abuseMaxPerDay: { type: String, default: "15" },
@@ -30,6 +33,9 @@ const settingsSchema = new mongoose.Schema(
     secrets: {
       telegramBotToken: { type: String, default: "" },
       telegramWebhookSecret: { type: String, default: "" },
+      whatsappAccessToken: { type: String, default: "" },
+      whatsappAppSecret: { type: String, default: "" },
+      whatsappVerifyToken: { type: String, default: "" },
       openRouterApiKey: { type: String, default: "" },
       pearlApiKey: { type: String, default: "" },
       aspireApiKey: { type: String, default: "" },

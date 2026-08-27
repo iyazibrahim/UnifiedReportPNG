@@ -1,14 +1,14 @@
 # Penang Unified Public Report
 
-**One Telegram channel for public complaints across Pulau Pinang.**
+**One reporting channel for public complaints across Pulau Pinang — Telegram and WhatsApp.**
 
-People in Penang often do not know which office to call — city council, water company, roads, or state. This project gives them one place to report a problem: send a message on Telegram with a short description, optional photos, and a location. The system sorts the report and sends it to the right agency. Staff can follow cases on a simple web dashboard, and each agency has a demo inbox to update status (received, in progress, done, or rejected). The reporter gets updates back on Telegram.
+People in Penang often do not know which office to call — city council, water company, roads, or state. This project gives them one place to report a problem: send a message with a short description, optional photos, and a location. The system sorts the report and routes it to the right agency. Staff follow cases on a web dashboard; each agency has an inbox to update status (received, in progress, done, or rejected). The reporter gets updates back on the same channel they used.
 
 ## Technology
 
 | Area | What we use |
 |------|-------------|
-| Bot chat | Telegram (Bot API) |
+| Citizen chat | Telegram (Bot API) · WhatsApp Cloud API |
 | Server | Node.js, Express |
 | Website | React, Tailwind CSS |
 | Database | MongoDB |
@@ -18,10 +18,10 @@ People in Penang often do not know which office to call — city council, water 
 
 ## End-user manual
 
-### For the public (Telegram)
+### For the public (Telegram or WhatsApp)
 
-1. Open the Penang report bot in Telegram.
-2. Tap **Start** or type `/start`. You will see a menu:
+1. Open the Penang report bot on Telegram or WhatsApp.
+2. Start the chat (`/start` on Telegram, or any message on WhatsApp). You will see a menu:
    - **Aduan Baharu** — make a new report  
    - **Semak Aduan** — check your recent reports  
    - **Bantuan** — short how-to  
@@ -30,18 +30,18 @@ People in Penang often do not know which office to call — city council, water 
    Examples: *jalan berlubang di hadapan 7-Eleven Komtar*, *sampah bertimbun*, *paip bocor*.
 5. Add more photos if you want (up to 5), then tap **Teruskan**, or **Tiada foto** if you have none.
 6. Share your location:
-   - Tap **Kongsi lokasi GPS**, or  
+   - Share a GPS pin, or  
    - Type a nearby place (for example *Masjid Jamek Sungai Rusa* or *Lotus Kepala Batas*).
-7. Check the pin on the map. Tap **Ya** if it is correct, or try again / go back to the menu.
+7. Check the pin. Tap **Ya** if it is correct, or try again / go back to the menu.
 8. Review the summary (category and suggested agency), then tap **Hantar aduan**.
-9. Keep your reference number. You will get a Telegram message when the status changes.
+9. Keep your reference number. You will get a message on the same channel when the status changes.
 10. Use **Semak Aduan** anytime to see your latest reports.
 
 **Tips**
 
 - Reports must be **in or near Penang** (a small border area is allowed). Faraway pins are rejected.
-- If the chat looks empty after you clear history, type `/start` or open the **Menu** button beside the message box.
-- You can also type `/status` or `/help`.
+- On Telegram, if the chat looks empty after you clear history, type `/start` or open the **Menu** button beside the message box.
+- You can also type `/status` or `/help` on Telegram.
 
 ### For operations staff (admin website)
 
@@ -49,19 +49,19 @@ People in Penang often do not know which office to call — city council, water 
 2. Sign in with the ops username and password.
 3. **Overview** — see counts and recent reports.
 4. **Cases** — search and filter all reports; open one for full detail, map, and photos.
-5. **Mock portals** — pick an agency (Pearl, Aspire, MyJalan, PBAPP, ePINTAS) to open its demo inbox.
-6. **Settings** — turn features on/off and update keys (Telegram token, optional AI key) without rebuilding the app.
+5. **Agency portals** — pick an agency (Pearl, Aspire, MyJalan, PBAPP, ePINTAS) to open its inbox.
+6. **Settings** — turn channels on/off and paste keys (Telegram token, WhatsApp Cloud API credentials, optional AI key) without rebuilding the app.
 
 New reports can show a short live alert on the admin screen.
 
-### For agency demo users (mock portals)
+### For agency users (portals)
 
-1. From **Mock portals**, choose your agency, or open a link such as `/mock/pearl_mbpp`.
+1. From **Agency portals**, choose your agency, or open a link such as `/portals/pearl_mbpp` (legacy `/mock/...` still works).
 2. Open a ticket in the inbox.
 3. Update status: **Diterima → Dalam tindakan → Selesai** or **Ditolak**.
-4. The citizen who sent the report gets a Telegram update when you change the status.
+4. The citizen who sent the report gets an update on their channel when you change the status.
 
-These portals are **simulations** until real agency systems are connected.
+These portals are this system’s agency inboxes for triage and status updates.
 
 ---
 
@@ -73,7 +73,7 @@ cd UnifiedReportPNG
 cp .env.example .env
 ```
 
-Set at least: Telegram bot token, ops password, and a secure login secret (`JWT_SECRET`).
+Set at least: one channel (Telegram bot token and/or WhatsApp Cloud API credentials), ops password, and a secure login secret (`JWT_SECRET`).
 
 ```bash
 docker compose up -d --build
@@ -86,6 +86,18 @@ Then open:
 - Health check: http://localhost:3500/health  
 
 Load place names into the database with the seed command above after each deploy if the landmark list changed.
+
+### WhatsApp (Cloud API)
+
+In **Settings → API keys / Config**, paste:
+
+- Access token  
+- Phone number ID  
+- App secret (webhook signature)  
+- Verify token (or leave blank to auto-generate)  
+- Public base URL (e.g. `https://your-host`)
+
+Copy the shown webhook URL (`{publicBaseUrl}/whatsapp/webhook`) into Meta Developer Console, then enable **WhatsApp bot**.
 
 ## Tests
 

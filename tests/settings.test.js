@@ -33,6 +33,8 @@ describe("defaultToggles", () => {
   it("enables all agencies by default", () => {
     const t = defaultToggles();
     assert.equal(t.mockDispatchEnabled, true);
+    assert.equal(t.whatsappBotEnabled, true);
+    assert.equal(t.telegramBotEnabled, true);
     assert.equal(t.pearl_mbpp, true);
     assert.equal(t.epintas, true);
     assert.equal(t.abuseGuardsEnabled, true);

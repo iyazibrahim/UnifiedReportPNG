@@ -269,7 +269,7 @@ export function CaseDetailPage() {
 
         <Card className="lg:col-span-2">
           <CardHeader>
-            <CardTitle>Dispatch / mock ticket</CardTitle>
+            <CardTitle>Dispatch / agency ticket</CardTitle>
           </CardHeader>
           <CardContent className="space-y-2 text-sm">
             <p>External ref: {c.dispatch?.externalRef || "—"}</p>
@@ -295,7 +295,7 @@ export function CaseDetailPage() {
               </>
             ) : (
               <p className="text-[var(--color-muted-foreground)]">
-                No mock ticket linked
+                No agency ticket linked
               </p>
             )}
           </CardContent>

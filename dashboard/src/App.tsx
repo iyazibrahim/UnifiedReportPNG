@@ -33,11 +33,18 @@ export default function App() {
         <Route path="cases/:ref" element={<CaseDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
         <Route path="mock-portals" element={<MockPortalsHubPage />} />
+        <Route path="portals" element={<MockPortalsHubPage />} />
       </Route>
-      <Route path="/mock" element={<Navigate to="/admin/mock-portals" replace />} />
+      <Route path="/mock" element={<Navigate to="/admin/portals" replace />} />
+      <Route path="/portals" element={<Navigate to="/admin/portals" replace />} />
       <Route path="/mock/:agencyId" element={<MockInboxPage />} />
+      <Route path="/portals/:agencyId" element={<MockInboxPage />} />
       <Route
         path="/mock/:agencyId/:externalRef"
+        element={<MockTicketPage />}
+      />
+      <Route
+        path="/portals/:agencyId/:externalRef"
         element={<MockTicketPage />}
       />
       <Route path="*" element={<Navigate to="/admin" replace />} />

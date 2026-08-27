@@ -38,10 +38,13 @@ async function optionalPinGuard(req, res, next) {
 }
 
 /**
- * @param {{ sendMessage?: (chatId: string|number, text: string) => Promise<unknown> }} [opts]
+ * @param {{ sendMessage?: Function, senders?: { telegram?: Function, whatsapp?: Function, sendMessage?: Function } }} [opts]
  */
 export function createMockRouter(opts = {}) {
-  const { sendMessage } = opts;
+  const senders = opts.senders || {
+    sendMessage: opts.sendMessage,
+    telegram: opts.sendMessage,
+  };
   const router = Router({ mergeParams: true });
 
   router.get("/agencies", (_req, res) => {
@@ -135,7 +138,7 @@ export function createMockRouter(opts = {}) {
       if (ticket.caseRef) {
         const caseDoc = await Case.findOne({ ref: ticket.caseRef }).lean();
         if (caseDoc) {
-          await notifyReporterStatusUpdate(sendMessage, caseDoc, ticketObj);
+          await notifyReporterStatusUpdate(senders, caseDoc, ticketObj);
         }
       }
 

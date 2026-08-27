@@ -1,4 +1,4 @@
-import { emptyDraft } from "./copy.js";
+import { emptyDraft } from "../bot/copy.js";
 import { Session } from "../models/Session.js";
 
 export function normalizeDraft(draft) {
@@ -15,12 +15,29 @@ export function normalizeDraft(draft) {
   };
 }
 
-export async function loadSession(telegramUserId) {
-  const id = String(telegramUserId);
-  let doc = await Session.findOne({ telegramUserId: id });
+/**
+ * Load or create a session for a channel user.
+ * Telegram still accepts legacy docs keyed only by telegramUserId.
+ */
+export async function loadSession(channel, channelUserId) {
+  const ch = channel || "telegram";
+  const id = String(channelUserId);
+
+  let doc = await Session.findOne({ channel: ch, channelUserId: id });
+  if (!doc && ch === "telegram") {
+    doc = await Session.findOne({ telegramUserId: id });
+    if (doc) {
+      doc.channel = "telegram";
+      doc.channelUserId = id;
+      if (!doc.telegramUserId) doc.telegramUserId = id;
+      await doc.save();
+    }
+  }
   if (!doc) {
     doc = await Session.create({
-      telegramUserId: id,
+      channel: ch,
+      channelUserId: id,
+      telegramUserId: ch === "telegram" ? id : undefined,
       step: "idle",
       draft: emptyDraft(),
     });

@@ -22,7 +22,7 @@ export const MSG = {
   welcome: [
     "Assalamualaikum / Selamat sejahtera.",
     "",
-    "Ini ialah *Saluran Aduan Bersatu Pulau Pinang* (MVP Telegram).",
+    "Ini ialah *Saluran Aduan Bersatu Pulau Pinang*.",
     "Anda boleh menghantar aduan awam tanpa memuat turun aplikasi baharu.",
     "",
     "Gunakan butang menu di bawah:",
@@ -195,7 +195,6 @@ export function previewMessage(draft) {
     "",
     "Sila tekan *Hantar* untuk mengemukakan aduan,",
     "atau *Batal* untuk membatalkan aduan ini.",
-    "(MVP: tiket agensi adalah simulasi sehingga API rasmi disambungkan.)",
   ]
     .filter((line) => line !== undefined)
     .join("\n");
@@ -210,10 +209,10 @@ export function submittedMessage(caseDoc) {
     "",
     `No. rujukan: ${caseDoc.ref}`,
     `Agensi: ${caseDoc.jurisdiction.agencyLabel}`,
-    `No. tiket (simulasi): ${caseDoc.dispatch.externalRef}`,
+    `No. tiket: ${caseDoc.dispatch.externalRef}`,
     triage,
     "",
-    "Anda akan menerima pemberitahuan di Telegram apabila status aduan dikemas kini.",
+    "Anda akan menerima pemberitahuan di saluran ini apabila status aduan dikemas kini.",
     "Tekan *Semak Aduan* untuk menyemak semula.",
   ].join("\n");
 }

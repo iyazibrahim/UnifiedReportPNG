@@ -5,6 +5,9 @@ import { Settings, defaultToggles } from "../models/Settings.js";
 const SECRET_KEYS = [
   "telegramBotToken",
   "telegramWebhookSecret",
+  "whatsappAccessToken",
+  "whatsappAppSecret",
+  "whatsappVerifyToken",
   "openRouterApiKey",
   "pearlApiKey",
   "aspireApiKey",
@@ -17,6 +20,8 @@ const CONFIG_KEYS = [
   "openRouterModel",
   "nominatimUserAgent",
   "telegramWebhookUrl",
+  "publicBaseUrl",
+  "whatsappPhoneNumberId",
   "mockPortalPin",
   "abuseMaxPerHour",
   "abuseMaxPerDay",
@@ -26,6 +31,11 @@ const CONFIG_KEYS = [
 const ENV_MAP = {
   telegramBotToken: "TELEGRAM_BOT_TOKEN",
   telegramWebhookSecret: "TELEGRAM_WEBHOOK_SECRET",
+  whatsappAccessToken: "WHATSAPP_ACCESS_TOKEN",
+  whatsappAppSecret: "WHATSAPP_APP_SECRET",
+  whatsappVerifyToken: "WHATSAPP_VERIFY_TOKEN",
+  whatsappPhoneNumberId: "WHATSAPP_PHONE_NUMBER_ID",
+  publicBaseUrl: "PUBLIC_BASE_URL",
   openRouterApiKey: "OPENROUTER_API_KEY",
   openRouterModel: "OPENROUTER_MODEL",
   nominatimUserAgent: "NOMINATIM_USER_AGENT",
@@ -139,6 +149,18 @@ export async function ensureSettingsSeeded() {
       changed = true;
     }
   }
+  // Auto-generate WhatsApp verify token once if missing (env + DB empty)
+  const existingVerify = pickDbSecret(doc, "whatsappVerifyToken", process.env);
+  const envVerify = process.env.WHATSAPP_VERIFY_TOKEN || "";
+  if (!existingVerify && !envVerify) {
+    doc.secrets = doc.secrets || {};
+    doc.secrets.whatsappVerifyToken = encryptSecret(
+      crypto.randomBytes(16).toString("hex"),
+      process.env
+    );
+    doc.markModified("secrets");
+    changed = true;
+  }
   if (changed && typeof doc.save === "function") {
     await doc.save();
     invalidateSettingsCache();
@@ -195,7 +217,7 @@ export async function getResolvedRuntime(env = process.env) {
       key === "openRouterModel"
         ? "openai/gpt-4o-mini"
         : key === "nominatimUserAgent"
-          ? "UnifiedReportPenang/1.0 (mvp)"
+          ? "UnifiedReportPenang/1.0"
           : "";
     config[key] = await resolveConfig(key, env, fallback);
   }
