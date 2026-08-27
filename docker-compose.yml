@@ -1,10 +1,41 @@
 services:
   mongo:
     image: mongo:7
-    ports:
-      - "27017:27017"
+    restart: unless-stopped
     volumes:
       - mongo_data:/data/db
+    healthcheck:
+      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+      start_period: 20s
+
+  app:
+    build: .
+    restart: unless-stopped
+    ports:
+      - "${PORT:-3500}:3500"
+    env_file:
+      - path: .env
+        required: false
+    environment:
+      PORT: "3500"
+      MONGODB_URI: mongodb://mongo:27017/unified-report-penang
+      TELEGRAM_BOT_TOKEN: ${TELEGRAM_BOT_TOKEN:-}
+      TELEGRAM_WEBHOOK_URL: ${TELEGRAM_WEBHOOK_URL:-}
+      TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
+      OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
+      OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
+      NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-UnifiedReportPenang/1.0 (mvp)}
+      OPS_USER: ${OPS_USER:-ops}
+      OPS_PASSWORD: ${OPS_PASSWORD:-changeme}
+      JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
+      SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:-}
+      MOCK_PORTAL_PIN: ${MOCK_PORTAL_PIN:-}
+    depends_on:
+      mongo:
+        condition: service_healthy
 
 volumes:
   mongo_data:

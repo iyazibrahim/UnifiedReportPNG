@@ -26,6 +26,7 @@ import {
   submitKeyboard,
 } from "./keyboards.js";
 import { loadSession, resetSession } from "./sessions.js";
+import { resolveToggle } from "../settings/service.js";
 
 function displayName(ctx) {
   return [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ");
@@ -35,6 +36,14 @@ function largestPhotoId(ctx) {
   const photos = ctx.message?.photo;
   if (!photos?.length) return null;
   return photos[photos.length - 1].file_id;
+}
+
+async function ensureBotEnabled(ctx) {
+  if (await resolveToggle("telegramBotEnabled")) return true;
+  await ctx.reply(
+    "Saluran Telegram sedang dinyahaktifkan sementara. Sila cuba lagi kemudian."
+  );
+  return false;
 }
 
 async function classifyAndPreview(session, config) {
@@ -90,6 +99,11 @@ async function ingestLocation(ctx, session, config) {
 
 export function createBot(config, { gateway } = {}) {
   const bot = new Bot(config.telegramToken);
+
+  bot.use(async (ctx, next) => {
+    if (!(await ensureBotEnabled(ctx))) return;
+    return next();
+  });
 
   bot.command("start", async (ctx) => {
     const session = await loadSession(ctx.from.id);

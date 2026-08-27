@@ -1,6 +1,12 @@
 import express from "express";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { telegramWebhookMiddleware } from "./bot/createBot.js";
-import { createOpsRouter } from "./ops/routes.js";
+import { createAdminRouter } from "./admin/routes.js";
+import { createMockRouter } from "./mock/routes.js";
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const dashboardDist = path.join(__dirname, "..", "dashboard", "dist");
 
 export function createApp({ config, bot }) {
   const app = express();
@@ -8,12 +14,35 @@ export function createApp({ config, bot }) {
   app.get("/health", (_req, res) => {
     res.json({ ok: true, service: "unified-report-penang" });
   });
-  app.use("/ops", createOpsRouter(config));
+
+  app.use("/api/admin", createAdminRouter(config));
+  app.use("/api/mock", createMockRouter());
+
+  app.get("/ops", (_req, res) => {
+    res.redirect(302, "/admin");
+  });
+
   if (bot && config.webhookUrl) {
     app.use(
       "/telegram/webhook",
       telegramWebhookMiddleware(bot, config.webhookSecret)
     );
   }
+
+  app.use(express.static(dashboardDist));
+
+  app.get(/^\/(admin|mock)(\/.*)?$/, (_req, res) => {
+    res.sendFile(path.join(dashboardDist, "index.html"), (err) => {
+      if (err) {
+        res
+          .status(503)
+          .type("text")
+          .send(
+            "Dashboard not built yet. Run: npm run build:dashboard"
+          );
+      }
+    });
+  });
+
   return app;
 }

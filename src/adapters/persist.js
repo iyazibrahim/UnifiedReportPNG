@@ -9,7 +9,18 @@ export function createPersistedAdapters() {
     wrapped[agencyId] = {
       async submit(caseDoc) {
         const result = await adapter.submit(caseDoc);
-        await MockTicket.create(result.raw);
+        const now = new Date();
+        await MockTicket.create({
+          ...result.raw,
+          status: "received",
+          statusHistory: [
+            {
+              status: "received",
+              note: "Diterima dari saluran bersatu",
+              at: now,
+            },
+          ],
+        });
         return result;
       },
     };

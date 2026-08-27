@@ -1,0 +1,35 @@
+@import "tailwindcss";
+
+@theme inline {
+  --color-background: oklch(0.985 0.01 145);
+  --color-foreground: oklch(0.22 0.03 150);
+  --color-card: oklch(1 0 0);
+  --color-card-foreground: oklch(0.22 0.03 150);
+  --color-primary: oklch(0.38 0.08 155);
+  --color-primary-foreground: oklch(0.98 0.01 145);
+  --color-secondary: oklch(0.94 0.02 145);
+  --color-secondary-foreground: oklch(0.28 0.04 150);
+  --color-muted: oklch(0.95 0.015 145);
+  --color-muted-foreground: oklch(0.45 0.03 150);
+  --color-accent: oklch(0.93 0.03 145);
+  --color-accent-foreground: oklch(0.28 0.04 150);
+  --color-destructive: oklch(0.55 0.2 25);
+  --color-border: oklch(0.88 0.02 145);
+  --color-input: oklch(0.88 0.02 145);
+  --color-ring: oklch(0.45 0.08 155);
+  --radius-sm: 0.35rem;
+  --radius-md: 0.5rem;
+  --radius-lg: 0.75rem;
+}
+
+* {
+  border-color: var(--color-border);
+}
+
+body {
+  margin: 0;
+  min-height: 100vh;
+  background: var(--color-background);
+  color: var(--color-foreground);
+  font-family: "IBM Plex Sans", "Segoe UI", system-ui, sans-serif;
+}

@@ -1,7 +1,30 @@
+import {
+  resolveConfig,
+  resolveToggle,
+} from "../settings/service.js";
+
 const NOMINATIM_URL = "https://nominatim.openstreetmap.org/reverse";
 
 export async function reverseGeocode(lat, lng, { userAgent, fetchImpl } = {}) {
+  if (!(await resolveToggle("nominatimEnabled"))) {
+    return {
+      display_name: null,
+      road: null,
+      raw: { skipped: "nominatim_disabled" },
+    };
+  }
+
   const fetchFn = fetchImpl || fetch;
+  const ua =
+    userAgent ||
+    (
+      await resolveConfig(
+        "nominatimUserAgent",
+        process.env,
+        "UnifiedReportPenang/1.0 (mvp)"
+      )
+    ).value;
+
   const url = new URL(NOMINATIM_URL);
   url.searchParams.set("lat", String(lat));
   url.searchParams.set("lon", String(lng));
@@ -12,7 +35,7 @@ export async function reverseGeocode(lat, lng, { userAgent, fetchImpl } = {}) {
   const res = await fetchFn(url, {
     headers: {
       Accept: "application/json",
-      "User-Agent": userAgent || "UnifiedReportPenang/1.0 (mvp)",
+      "User-Agent": ua,
     },
   });
   if (!res.ok) {
