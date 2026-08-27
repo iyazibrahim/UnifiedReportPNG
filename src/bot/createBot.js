@@ -227,7 +227,7 @@ export function createBot(config, { gateway } = {}) {
   bot.command("menu", async (ctx) => {
     const session = await loadSession(ctx.from.id);
     await resetSession(session);
-    await replyMenu(ctx, MSG.backToMenu);
+    await replyMenu(ctx, MSG.welcome);
   });
 
   bot.command("status", async (ctx) => {
@@ -534,6 +534,23 @@ export function createBot(config, { gateway } = {}) {
     await replyCollecting();
   });
 
+  bot.on(
+    [
+      "message:sticker",
+      "message:animation",
+      "message:voice",
+      "message:video",
+      "message:document",
+      "message:contact",
+    ],
+    async (ctx) => {
+      const session = await loadSession(ctx.from.id);
+      if (session.step === "idle" || session.step === "awaiting_description") {
+        await replyMenu(ctx, MSG.idleHint);
+      }
+    }
+  );
+
   bot.on("message:text", async (ctx) => {
     if (ctx.message.text?.startsWith("/")) return;
     const session = await loadSession(ctx.from.id);
@@ -577,8 +594,13 @@ export function createBot(config, { gateway } = {}) {
       return;
     }
 
-    if (session.step === "awaiting_description" || session.step === "idle") {
-      // Idle free-text still starts a report (shortcut)
+    if (session.step === "idle") {
+      // Cleared chat / cold open: re-show welcome + reply keyboard
+      await replyMenu(ctx, MSG.welcome);
+      return;
+    }
+
+    if (session.step === "awaiting_description") {
       session.draft.text = text;
       if (!session.draft.askedPhoto && !hasPhotos(session)) {
         session.draft.askedPhoto = true;
@@ -641,6 +663,25 @@ export function createBot(config, { gateway } = {}) {
   });
 
   return bot;
+}
+
+/** Register slash-commands + Menu button so users can recover after clearing chat. */
+export async function setupBotUi(bot) {
+  await bot.api.setMyCommands([
+    { command: "start", description: "Mula / paparkan menu utama" },
+    { command: "menu", description: "Paparkan menu utama" },
+    { command: "status", description: "Semak aduan anda" },
+    { command: "help", description: "Bantuan cara guna" },
+  ]);
+  await bot.api.setChatMenuButton({
+    menu_button: { type: "commands" },
+  });
+  await bot.api.setMyDescription(
+    "Saluran Aduan Bersatu Pulau Pinang. Taip /start untuk mula."
+  );
+  await bot.api.setMyShortDescription(
+    "Aduan awam Pulau Pinang — taip /start"
+  );
 }
 
 export function telegramWebhookMiddleware(bot, secretToken) {

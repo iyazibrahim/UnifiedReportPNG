@@ -29,6 +29,16 @@ export const MSG = {
     "• *Aduan Baharu* — buat aduan",
     "• *Semak Aduan* — lihat status aduan anda",
     "• *Bantuan* — cara guna bot",
+    "",
+    "Jika skrin kosong (selepas padam chat), taip /start atau buka Menu (ikon /) di sebelah kotak mesej.",
+  ].join("\n"),
+
+  idleHint: [
+    "Sila gunakan menu di bawah, atau taip /start.",
+    "",
+    "• *Aduan Baharu* — buat aduan",
+    "• *Semak Aduan* — lihat status",
+    "• *Bantuan* — cara guna bot",
   ].join("\n"),
 
   help: [

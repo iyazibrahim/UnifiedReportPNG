@@ -1,7 +1,7 @@
 import { loadConfig } from "./config.js";
 import { connectDb } from "./db.js";
 import { createApp } from "./app.js";
-import { createBot } from "./bot/createBot.js";
+import { createBot, setupBotUi } from "./bot/createBot.js";
 import { createGateway } from "./adapters/gateway.js";
 import { createPersistedAdapters } from "./adapters/persist.js";
 import {
@@ -54,6 +54,12 @@ const app = createApp({ config: runtimeConfig, bot });
 const server = app.listen(config.port, async () => {
   console.log(`Listening on ${config.port}`);
   console.log(`Admin: http://localhost:${config.port}/admin`);
+  try {
+    await setupBotUi(bot);
+    console.log("Telegram commands / menu registered");
+  } catch (err) {
+    console.warn("Failed to register Telegram UI:", err.message);
+  }
   if (runtimeConfig.webhookUrl) {
     await bot.api.setWebhook(runtimeConfig.webhookUrl, {
       secret_token: runtimeConfig.webhookSecret || undefined,
