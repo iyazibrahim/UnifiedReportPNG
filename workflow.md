@@ -13,6 +13,7 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Feature toggles wired into bot, classifier, geocode, gateway
 - [x] React dashboard (`dashboard/`): admin + per-agency mock portals
 - [x] Express serves `dashboard/dist`; `/ops` → `/admin`
+- [x] Fix photo+caption session loop (Mongoose Mixed `draft` now markModified via `saveSession`)
 
 ## How to run
 

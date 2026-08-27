@@ -25,7 +25,13 @@ import {
   photoSkipKeyboard,
   submitKeyboard,
 } from "./keyboards.js";
-import { loadSession, resetSession } from "./sessions.js";
+import {
+  hasIntakeText,
+  hasPhotos,
+  loadSession,
+  resetSession,
+  saveSession,
+} from "./sessions.js";
 import { resolveToggle } from "../settings/service.js";
 
 function displayName(ctx) {
@@ -64,7 +70,7 @@ async function classifyAndPreview(session, config) {
   session.draft.classification = classification;
   session.draft.jurisdiction = jurisdiction;
   session.step = "awaiting_submit";
-  await session.save();
+  await saveSession(session);
 }
 
 async function ingestLocation(ctx, session, config) {
@@ -73,7 +79,7 @@ async function ingestLocation(ctx, session, config) {
   const truth = captureTruth(loc);
   if (needsMapPick(truth)) {
     session.step = "awaiting_location";
-    await session.save();
+    await saveSession(session);
     await ctx.reply(MSG.coarseGps, { reply_markup: locationKeyboard() });
     return true;
   }
@@ -89,7 +95,7 @@ async function ingestLocation(ctx, session, config) {
   const labeled = applyLabel(base, geocode);
   session.draft.location = labeled;
   session.step = "awaiting_confirm";
-  await session.save();
+  await saveSession(session);
   await ctx.replyWithLocation(labeled.lat, labeled.lng);
   await ctx.reply(formatConfirmMessage(labeled), {
     reply_markup: confirmKeyboard(),
@@ -143,13 +149,13 @@ export function createBot(config, { gateway } = {}) {
 
   bot.callbackQuery("photo_skip", async (ctx) => {
     const session = await loadSession(ctx.from.id);
-    if (!session.draft.text) {
+    if (!hasIntakeText(session)) {
       await ctx.answerCallbackQuery({ text: "Hantar keterangan dulu" });
       return;
     }
     session.draft.askedPhoto = true;
     session.step = "awaiting_location";
-    await session.save();
+    await saveSession(session);
     await ctx.answerCallbackQuery();
     await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
   });
@@ -158,7 +164,7 @@ export function createBot(config, { gateway } = {}) {
     const session = await loadSession(ctx.from.id);
     session.draft.location = null;
     session.step = "awaiting_location";
-    await session.save();
+    await saveSession(session);
     await ctx.answerCallbackQuery();
     await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
   });
@@ -174,7 +180,7 @@ export function createBot(config, { gateway } = {}) {
       "button_yes_plus_landmark"
     );
     session.step = "awaiting_landmark";
-    await session.save();
+    await saveSession(session);
     await ctx.answerCallbackQuery();
     await ctx.reply(MSG.askLandmark);
   });
@@ -185,7 +191,7 @@ export function createBot(config, { gateway } = {}) {
       await ctx.answerCallbackQuery({ text: "Hantar lokasi dulu" });
       return;
     }
-    if (!session.draft.text) {
+    if (!hasIntakeText(session)) {
       await ctx.answerCallbackQuery({ text: "Hantar keterangan dulu" });
       return;
     }
@@ -257,7 +263,11 @@ export function createBot(config, { gateway } = {}) {
 
   bot.on("message:location", async (ctx) => {
     const session = await loadSession(ctx.from.id);
-    if (!session.draft.text && !session.draft.photoFileIds.length) {
+    if (!hasIntakeText(session) && !hasPhotos(session)) {
+      await ctx.reply(MSG.needText);
+      return;
+    }
+    if (!hasIntakeText(session)) {
       await ctx.reply(MSG.needText);
       return;
     }
@@ -268,17 +278,17 @@ export function createBot(config, { gateway } = {}) {
     const session = await loadSession(ctx.from.id);
     const fileId = largestPhotoId(ctx);
     if (fileId) session.draft.photoFileIds.push(fileId);
-    const caption = ctx.message.caption;
+    const caption = ctx.message.caption?.trim();
     if (caption) session.draft.text = caption;
-    if (!session.draft.text) {
+    if (!hasIntakeText(session)) {
       session.step = "idle";
-      await session.save();
+      await saveSession(session);
       await ctx.reply(MSG.needText);
       return;
     }
     session.draft.askedPhoto = true;
     session.step = "awaiting_location";
-    await session.save();
+    await saveSession(session);
     await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
   });
 
@@ -305,21 +315,32 @@ export function createBot(config, { gateway } = {}) {
       return;
     }
 
-    if (session.step === "awaiting_location" || session.step === "awaiting_confirm") {
+    // Waiting for location: if description was lost / missing, accept text then re-ask pin
+    if (
+      session.step === "awaiting_location" ||
+      session.step === "awaiting_confirm"
+    ) {
+      if (!hasIntakeText(session)) {
+        session.draft.text = text;
+        session.step = "awaiting_location";
+        await saveSession(session);
+        await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+        return;
+      }
       await ctx.reply(MSG.needLocation, { reply_markup: locationKeyboard() });
       return;
     }
 
     session.draft.text = text;
-    if (!session.draft.askedPhoto && session.draft.photoFileIds.length === 0) {
+    if (!session.draft.askedPhoto && !hasPhotos(session)) {
       session.draft.askedPhoto = true;
       session.step = "awaiting_photo";
-      await session.save();
+      await saveSession(session);
       await ctx.reply(MSG.askPhoto, { reply_markup: photoSkipKeyboard() });
       return;
     }
     session.step = "awaiting_location";
-    await session.save();
+    await saveSession(session);
     await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
   });
 
