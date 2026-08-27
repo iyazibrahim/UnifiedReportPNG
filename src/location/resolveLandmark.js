@@ -1,9 +1,12 @@
 /**
  * Normalize a colloquial Penang landmark into Nominatim search queries via OpenRouter,
  * then fall back to heuristic stripping (depan / berdekatan / traffic light / …).
+ * Prefers local Landmark DB before Nominatim.
  */
 import { buildLandmarkQueries } from "./landmarkQueries.js";
 import { forwardGeocodeCandidates } from "./geocode.js";
+import { matchLandmarkDb } from "./landmarkStore.js";
+import { locateDaerah, daerahLabel } from "../jurisdiction/daerah.js";
 
 const SYSTEM = `You help locate citizen reports in Pulau Pinang (Penang), Malaysia only.
 Given a landmark or place phrase in Malay/English slang, return JSON only:
@@ -122,22 +125,55 @@ export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } 
   }
 }
 
+function attachDaerah(hit, method) {
+  if (!hit) return null;
+  const daerah = hit.daerah || locateDaerah(hit.lat, hit.lng);
+  const label = daerahLabel(daerah);
+  let display_name = hit.display_name;
+  if (hit.placeName) {
+    display_name = `${hit.placeName} · ${label} · Pulau Pinang`;
+  } else if (display_name && !/Timur Laut|Barat Daya|Seberang Perai/i.test(display_name)) {
+    display_name = `${display_name} (${label})`;
+  }
+  return {
+    ...hit,
+    daerah,
+    city: label,
+    display_name,
+    method: method || hit.method,
+  };
+}
+
 /**
- * LLM (optional) + heuristic query stripping, then Nominatim until a hit.
+ * Local Landmark DB → LLM + Nominatim heuristics.
  */
 export async function resolveCitizenPlace(
   text,
-  { apiKey, model, userAgent, fetchImpl } = {}
+  { apiKey, model, userAgent, fetchImpl, skipDb = false } = {}
 ) {
   const raw = String(text || "").trim();
   if (!raw) return null;
+
+  if (!skipDb) {
+    try {
+      const dbHit = await matchLandmarkDb(raw);
+      if (dbHit) return attachDaerah(dbHit, "landmark_db");
+    } catch {
+      // Mongo unavailable — fall through to Nominatim
+    }
+  }
+
   const resolved = await resolveLandmarkWithLlm(raw, { apiKey, model, fetchImpl });
   const queries = buildLandmarkQueries(raw, resolved.searchQueries || []);
   const hit = await forwardGeocodeCandidates(queries, { userAgent, fetchImpl });
   if (!hit) return null;
-  return {
-    ...hit,
-    method: resolved.method,
-    queriesTried: queries,
-  };
+  const method = resolved.method === "llm" ? "landmark_ai" : "text_geocode";
+  return attachDaerah(
+    {
+      ...hit,
+      method,
+      queriesTried: queries,
+    },
+    method
+  );
 }

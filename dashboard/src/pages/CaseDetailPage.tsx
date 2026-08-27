@@ -101,6 +101,9 @@ export function CaseDetailPage() {
     lng?: number;
     display_name?: string;
     landmark?: string;
+    placeName?: string;
+    daerahLabel?: string;
+    daerah?: string;
     confirmed?: boolean;
     method?: string;
     source?: string;
@@ -226,11 +229,21 @@ export function CaseDetailPage() {
               </p>
             </div>
             <div>
-              <p className="font-medium">Nama jalan laporan</p>
+              <p className="font-medium">Nama lokasi laporan</p>
               <p>{loc.display_name || "—"}</p>
+              {loc.placeName ? (
+                <p className="text-[var(--color-muted-foreground)]">
+                  Mercu tanda DB: {loc.placeName}
+                </p>
+              ) : null}
+              {loc.daerahLabel || loc.daerah ? (
+                <p className="text-[var(--color-muted-foreground)]">
+                  Daerah: {loc.daerahLabel || loc.daerah}
+                </p>
+              ) : null}
               {loc.landmark ? (
                 <p className="text-[var(--color-muted-foreground)]">
-                  Mercu tanda: {loc.landmark}
+                  Teks pelapor: {loc.landmark}
                 </p>
               ) : null}
             </div>

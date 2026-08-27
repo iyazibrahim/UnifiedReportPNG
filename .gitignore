@@ -7,3 +7,4 @@ coverage/
 .cursor/
 dashboard/dist/
 dashboard/node_modules/
+data/landmarks.generated.json

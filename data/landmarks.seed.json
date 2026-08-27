@@ -1,0 +1,222 @@
+[
+  {
+    "name": "Masjid Jamek Sungai Rusa",
+    "aliases": ["masjid sungai rusa", "masjid jamek sg rusa", "jamek sungai rusa"],
+    "category": "masjid",
+    "lat": 5.3837118,
+    "lng": 100.2132602,
+    "daerah": "barat_daya",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Jalan Sungai Rusa, Sungai Rusa, Barat Daya, Pulau Pinang"
+  },
+  {
+    "name": "Lotus's Kepala Batas",
+    "aliases": ["lotus kepala batas", "lotus bertam", "tesco kepala batas", "lotus's bertam"],
+    "category": "supermarket",
+    "lat": 5.5169232,
+    "lng": 100.4424866,
+    "daerah": "spu",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Pusat Bandar Bertam Perdana, Kepala Batas, Seberang Perai Utara"
+  },
+  {
+    "name": "Padang Kota Lama",
+    "aliases": ["padang kota", "esplanade", "padang kota lama esplanade"],
+    "category": "landmark",
+    "lat": 5.4213,
+    "lng": 100.3442,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Esplanade, George Town, Timur Laut, Pulau Pinang"
+  },
+  {
+    "name": "Butterworth Ferry Terminal",
+    "aliases": ["jetty butterworth", "penang ferry butterworth", "terminal feri butterworth"],
+    "category": "landmark",
+    "lat": 5.3985,
+    "lng": 100.3638,
+    "daerah": "spu",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Butterworth, Seberang Perai Utara, Pulau Pinang"
+  },
+  {
+    "name": "Komtar",
+    "aliases": ["komtar george town", "menara komtar", "7-eleven komtar"],
+    "category": "mall",
+    "lat": 5.4145,
+    "lng": 100.3292,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Jalan Penang, George Town, Timur Laut, Pulau Pinang"
+  },
+  {
+    "name": "Hospital Pulau Pinang",
+    "aliases": ["hpp", "penang general hospital", "hospital penang"],
+    "category": "hospital",
+    "lat": 5.4167,
+    "lng": 100.3105,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Jalan Residensi, George Town, Timur Laut, Pulau Pinang"
+  },
+  {
+    "name": "Hospital Seberang Jaya",
+    "aliases": ["hsj", "hospital seberang jaya"],
+    "category": "hospital",
+    "lat": 5.3972,
+    "lng": 100.4075,
+    "daerah": "spt",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Seberang Jaya, Seberang Perai Tengah, Pulau Pinang"
+  },
+  {
+    "name": "Gurney Plaza",
+    "aliases": ["gurney", "plaza gurney"],
+    "category": "mall",
+    "lat": 5.4372,
+    "lng": 100.3095,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Persiaran Gurney, Timur Laut, Pulau Pinang"
+  },
+  {
+    "name": "Queensbay Mall",
+    "aliases": ["queensbay", "qbm"],
+    "category": "mall",
+    "lat": 5.3335,
+    "lng": 100.3068,
+    "daerah": "barat_daya",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Persiaran Bayan Indah, Bayan Lepas, Barat Daya, Pulau Pinang"
+  },
+  {
+    "name": "Universiti Sains Malaysia",
+    "aliases": ["usm", "usm penang", "kampus usm"],
+    "category": "school",
+    "lat": 5.3559,
+    "lng": 100.3013,
+    "daerah": "barat_daya",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Minden, Barat Daya, Pulau Pinang"
+  },
+  {
+    "name": "Aeon Mall Bukit Mertajam",
+    "aliases": ["aeon bm", "aeon bukit mertajam", "jusco bm"],
+    "category": "mall",
+    "lat": 5.3635,
+    "lng": 100.4662,
+    "daerah": "spt",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Bukit Mertajam, Seberang Perai Tengah, Pulau Pinang"
+  },
+  {
+    "name": "Sunway Carnival Mall",
+    "aliases": ["sunway carnival", "carnival mall seberang jaya"],
+    "category": "mall",
+    "lat": 5.3978,
+    "lng": 100.3985,
+    "daerah": "spt",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Seberang Jaya, Seberang Perai Tengah, Pulau Pinang"
+  },
+  {
+    "name": "Balik Pulau Town",
+    "aliases": ["balik pulau", "pekan balik pulau"],
+    "category": "landmark",
+    "lat": 5.3485,
+    "lng": 100.2295,
+    "daerah": "barat_daya",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Balik Pulau, Barat Daya, Pulau Pinang"
+  },
+  {
+    "name": "Penang International Airport",
+    "aliases": ["lapangan terbang penang", "bayankepas airport", "bayan lepas airport", "penang airport"],
+    "category": "landmark",
+    "lat": 5.2971,
+    "lng": 100.2769,
+    "daerah": "barat_daya",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Bayan Lepas, Barat Daya, Pulau Pinang"
+  },
+  {
+    "name": "Design Village Penang",
+    "aliases": ["design village", "design village bertam"],
+    "category": "mall",
+    "lat": 5.5245,
+    "lng": 100.442,
+    "daerah": "spu",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Bertam, Kepala Batas, Seberang Perai Utara"
+  },
+  {
+    "name": "Masjid Kapitan Keling",
+    "aliases": ["kapitan keling", "masjid kapitan"],
+    "category": "masjid",
+    "lat": 5.4169,
+    "lng": 100.3375,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "Lebuh Buckingham, George Town, Timur Laut"
+  },
+  {
+    "name": "1st Avenue Mall",
+    "aliases": ["1st avenue", "first avenue penang"],
+    "category": "mall",
+    "lat": 5.4148,
+    "lng": 100.3315,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "George Town, Timur Laut, Pulau Pinang"
+  },
+  {
+    "name": "Prangin Mall",
+    "aliases": ["prangin", "prangin mall komtar"],
+    "category": "mall",
+    "lat": 5.4138,
+    "lng": 100.3305,
+    "daerah": "timur_laut",
+    "side": "pulau",
+    "source": "curated",
+    "address": "George Town, Timur Laut, Pulau Pinang"
+  },
+  {
+    "name": "Giant Hypermarket Alma",
+    "aliases": ["giant alma", "giant bukit mertajam"],
+    "category": "supermarket",
+    "lat": 5.3415,
+    "lng": 100.4705,
+    "daerah": "spt",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Alma, Bukit Mertajam, Seberang Perai Tengah"
+  },
+  {
+    "name": "Nibong Tebal",
+    "aliases": ["pekan nibong tebal"],
+    "category": "landmark",
+    "lat": 5.1695,
+    "lng": 100.4775,
+    "daerah": "sps",
+    "side": "seberang",
+    "source": "curated",
+    "address": "Nibong Tebal, Seberang Perai Selatan, Pulau Pinang"
+  }
+]

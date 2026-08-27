@@ -111,6 +111,11 @@ export const MSG = {
     "Sila taip mercu tanda lain yang lebih jelas, atau tekan *Kongsi lokasi GPS*.",
   ].join("\n"),
 
+  outsidePenang: [
+    "Lokasi di luar kawasan Pulau Pinang (dan zon berdekatan).",
+    "Sila kongsi pin GPS atau mercu tanda *dalam negeri Pulau Pinang* sahaja.",
+  ].join("\n"),
+
   placeConfirmHint: [
     "Kami cadangkan pin ini berdasarkan tempat yang anda taip.",
     "Adakah lokasi ini betul?",
@@ -149,20 +154,28 @@ export function formatConfirmMessage(location) {
     location.accuracy_m != null
       ? ` (±${Math.round(location.accuracy_m)} m)`
       : "";
+  const placeLine = location.placeName
+    ? `Mercu tanda: ${location.placeName}`
+    : null;
+  const daerahLine = location.daerahLabel
+    ? `Daerah: ${location.daerahLabel}`
+    : null;
   const name = location.display_name || "tiada nama jalan";
   const landmark = location.landmark
-    ? `\nMercu tanda anda: ${location.landmark}`
-    : "";
+    ? `Mercu tanda anda: ${location.landmark}`
+    : null;
   return [
     "Sila sahkan lokasi aduan anda.",
     "",
     `Pin GPS: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}${acc}`,
-    `Nama jalan laporan: ${name}`,
+    placeLine,
+    daerahLine,
+    `Nama lokasi laporan: ${name}`,
     landmark,
     "",
-    "Nota: Nama jalan mungkin merujuk jalan besar berdekatan. Pin GPS digunakan untuk penyaluran agensi.",
+    "Nota: Pin GPS digunakan untuk penyaluran agensi. Daerah mengikuti sempadan Pulau Pinang.",
   ]
-    .filter((line) => line !== undefined)
+    .filter((line) => line != null && line !== "")
     .join("\n");
 }
 

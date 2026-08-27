@@ -158,6 +158,7 @@ describe("resolveCitizenPlace", () => {
       apiKey: "sk-test",
       fetchImpl,
       userAgent: "test",
+      skipDb: true,
     });
     assert.ok(hit);
     assert.equal(hit.lat, 5.3837);

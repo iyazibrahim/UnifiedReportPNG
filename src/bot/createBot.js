@@ -3,6 +3,8 @@ import { classifyReport } from "../classify/classify.js";
 import { resolveJurisdiction } from "../jurisdiction/resolver.js";
 import { reverseGeocode } from "../location/geocode.js";
 import { resolveCitizenPlace } from "../location/resolveLandmark.js";
+import { isAllowedPenangLocation } from "../jurisdiction/boundary.js";
+import { locateDaerah, daerahLabel } from "../jurisdiction/daerah.js";
 import {
   MSG,
   previewMessage,
@@ -109,11 +111,18 @@ async function startNewReport(ctx, session) {
 }
 
 async function classifyAndPreview(session, config) {
+  const loc = session.draft.location;
+  const gate = isAllowedPenangLocation(loc.lat, loc.lng);
+  if (!gate.allowed) {
+    session.draft.location = null;
+    session.step = "awaiting_location";
+    await saveSession(session);
+    return { rejected: true };
+  }
   const classification = await classifyReport(session.draft.text, {
     apiKey: config.openRouterKey,
     model: config.openRouterModel,
   });
-  const loc = session.draft.location;
   let jurisdiction = resolveJurisdiction({
     categoryId: classification.categoryId,
     lat: loc.lat,
@@ -134,12 +143,35 @@ async function classifyAndPreview(session, config) {
   session.draft.jurisdiction = jurisdiction;
   session.step = "awaiting_submit";
   await saveSession(session);
+  return { rejected: false };
+}
+
+function enrichLocationMeta(labeled, extras = {}) {
+  const daerah = extras.daerah || labeled.daerah || locateDaerah(labeled.lat, labeled.lng);
+  labeled.daerah = daerah;
+  labeled.daerahLabel = daerahLabel(daerah);
+  if (extras.placeName) labeled.placeName = extras.placeName;
+  if (extras.display_name) labeled.display_name = extras.display_name;
+  if (extras.city) labeled.city = extras.city;
+  return labeled;
+}
+
+async function rejectOutsidePenang(ctx, session) {
+  session.draft.location = null;
+  session.step = "awaiting_location";
+  await saveSession(session);
+  await ctx.reply(MSG.outsidePenang, { reply_markup: locationKeyboard() });
 }
 
 async function ingestLocation(ctx, session, config) {
   const loc = ctx.message.location;
   if (!loc) return false;
   const truth = captureTruth(loc);
+  const gate = isAllowedPenangLocation(truth.lat, truth.lng);
+  if (!gate.allowed) {
+    await rejectOutsidePenang(ctx, session);
+    return true;
+  }
   if (needsMapPick(truth)) {
     session.step = "awaiting_location";
     await saveSession(session);
@@ -155,7 +187,18 @@ async function ingestLocation(ctx, session, config) {
     geocode = { display_name: null, road: null };
   }
   const base = session.draft.location?.confirmed ? replaceTruth(truth) : truth;
-  const labeled = applyLabel(base, geocode);
+  let labeled = applyLabel(base, geocode);
+  labeled = enrichLocationMeta(labeled);
+  // Prefer daerah label over Nominatim city (often "George Town" for Barat Daya)
+  if (labeled.daerahLabel) {
+    labeled.city = labeled.daerahLabel;
+    if (labeled.display_name && /George Town/i.test(labeled.display_name)) {
+      labeled.display_name = labeled.display_name.replace(
+        /George Town/gi,
+        labeled.daerahLabel
+      );
+    }
+  }
   session.draft.location = labeled;
   session.draft.forceTriage = false;
   session.step = "awaiting_confirm";
@@ -181,15 +224,31 @@ async function resolveTextPlace(ctx, session, config, placeText) {
     await ctx.reply(MSG.placeNotFound, { reply_markup: locationKeyboard() });
     return;
   }
-  const source = hit.method === "llm" ? "landmark_ai" : "text_geocode";
+  const gate = isAllowedPenangLocation(hit.lat, hit.lng);
+  if (!gate.allowed) {
+    await rejectOutsidePenang(ctx, session);
+    return;
+  }
+  const source =
+    hit.method === "landmark_db"
+      ? "landmark_db"
+      : hit.method === "landmark_ai" || hit.method === "llm"
+        ? "landmark_ai"
+        : "text_geocode";
   const truth = captureGeocodedTruth({
     lat: hit.lat,
     lng: hit.lng,
     source,
     landmark: placeText,
   });
-  const labeled = applyLabel(truth, hit);
+  let labeled = applyLabel(truth, hit);
   labeled.landmark = placeText;
+  labeled = enrichLocationMeta(labeled, {
+    daerah: hit.daerah,
+    placeName: hit.placeName,
+    display_name: hit.display_name,
+    city: hit.city,
+  });
   session.draft.location = labeled;
   session.draft.geocodeFails = 0;
   session.draft.forceTriage = false;
@@ -318,8 +377,12 @@ export function createBot(config, { gateway } = {}) {
       session.draft.location,
       "uncertain_text_geocode"
     );
-    await classifyAndPreview(session, config);
+    const result = await classifyAndPreview(session, config);
     await ctx.answerCallbackQuery();
+    if (result.rejected) {
+      await ctx.reply(MSG.outsidePenang, { reply_markup: locationKeyboard() });
+      return;
+    }
     await ctx.reply(previewMessage(session.draft), {
       reply_markup: submitKeyboard(),
     });
@@ -356,8 +419,12 @@ export function createBot(config, { gateway } = {}) {
       session.draft.location,
       "button_yes"
     );
-    await classifyAndPreview(session, config);
+    const result = await classifyAndPreview(session, config);
     await ctx.answerCallbackQuery();
+    if (result.rejected) {
+      await ctx.reply(MSG.outsidePenang, { reply_markup: locationKeyboard() });
+      return;
+    }
     await ctx.reply(previewMessage(session.draft), {
       reply_markup: submitKeyboard(),
     });
@@ -573,7 +640,11 @@ export function createBot(config, { gateway } = {}) {
         session.draft.location,
         "button_yes_plus_landmark"
       );
-      await classifyAndPreview(session, config);
+      const result = await classifyAndPreview(session, config);
+      if (result.rejected) {
+        await ctx.reply(MSG.outsidePenang, { reply_markup: locationKeyboard() });
+        return;
+      }
       await ctx.reply(previewMessage(session.draft), {
         reply_markup: submitKeyboard(),
       });

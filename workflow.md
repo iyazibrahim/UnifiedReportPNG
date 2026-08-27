@@ -30,13 +30,17 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Mock portals hub: bento picker with official agency logos (`/admin/mock-portals`)
 - [x] Bot main menu: Aduan Baharu / Semak Aduan / Bantuan; GPS keyboard only on location step
 - [x] Landmark geocode: strip relative phrases (depan/berdekatan/traffic light) and retry Nominatim queries
-
+- [x] Penang landmark DB (curated + OSM/Google seed); fuzzy match before Nominatim; 5 daerah labels
+- [x] Location boundary: allow ~3 km buffer, reject farther pins (GPS + typed)
 
 ## How to run
 
 ```bash
 cp .env.example .env   # set TELEGRAM_BOT_TOKEN, OPS_PASSWORD, JWT_SECRET
 docker compose up -d --build
+# Seed landmark DB (curated file; optional OSM + Google Places)
+npm run seed:landmarks:file
+# Or full: GOOGLE_PLACES_API_KEY=... npm run seed:landmarks
 ```
 
 - Admin: http://localhost:3500/admin
@@ -44,7 +48,11 @@ docker compose up -d --build
 
 Compose: `mongo` + `app` (dashboard baked into image via Dockerfile).
 
+Landmark resolve order: local Mongo DB → LLM/Nominatim. No admin CRUD — refresh with seed script only.
+
+Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins rejected in bot.
+
 ## Validation
 
-- `npm test` — 53 tests passing
+- `npm test` — unit tests including landmark DB / daerah / boundary
 - `npm run build:dashboard` — Vite production build OK
