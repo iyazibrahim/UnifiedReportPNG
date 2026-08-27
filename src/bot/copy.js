@@ -45,8 +45,8 @@ export const MSG = {
     "Cara guna Saluran Aduan Bersatu:",
     "",
     "1. Tekan *Aduan Baharu*",
-    "2. Taip keterangan masalah",
-    "3. Hantar gambar bukti (jika ada), atau *Tiada foto*",
+    "2. Taip keterangan masalah, *atau* hantar gambar berserta caption",
+    "3. Hantar lagi gambar bukti (jika perlu), atau *Tiada foto* / *Teruskan*",
     "4. Kongsi lokasi GPS *atau* taip mercu tanda berdekatan",
     "5. Sahkan ringkasan, kemudian *Hantar aduan*",
     "",
@@ -55,9 +55,13 @@ export const MSG = {
   ].join("\n"),
 
   startNew: [
-    "Baik. Sila taip keterangan masalah.",
+    "Sila taip keterangan masalah, atau hantar gambar berserta caption untuk membuat aduan baharu.",
     "",
-    "Contoh: jalan berlubang / sampah bertimbun / paip bocor.",
+    "Contoh:",
+    "• jalan berlubang di hadapan 7-Eleven Komtar",
+    "• sampah bertimbun di longkang Taman Sri Nibong",
+    "• paip bocor di Jalan Burma",
+    "• lampu isyarat rosak di Butterworth",
   ].join("\n"),
 
   backToMenu: "Baik. Kembali ke menu utama.",
@@ -126,8 +130,11 @@ export const MSG = {
   cancelled:
     "Aduan ini telah dibatalkan. Tekan *Aduan Baharu* bila anda mahu cuba lagi.",
 
-  needText:
-    "Sila taip keterangan masalah terlebih dahulu.\nContoh: jalan berlubang / sampah bertimbun / paip bocor.",
+  needText: [
+    "Sila taip keterangan masalah, atau hantar gambar berserta caption.",
+    "",
+    "Contoh: jalan berlubang di hadapan 7-Eleven Komtar / sampah bertimbun / paip bocor.",
+  ].join("\n"),
 
   needLocation: [
     "Sila kongsi lokasi GPS, atau taip mercu tanda berdekatan.",
