@@ -1,7 +1,8 @@
 import { Bot, webhookCallback } from "grammy";
 import { classifyReport } from "../classify/classify.js";
 import { resolveJurisdiction } from "../jurisdiction/resolver.js";
-import { reverseGeocode } from "../location/geocode.js";
+import { reverseGeocode, forwardGeocode } from "../location/geocode.js";
+import { resolveLandmarkWithLlm } from "../location/resolveLandmark.js";
 import {
   MSG,
   previewMessage,
@@ -14,6 +15,7 @@ import {
   locationKeyboard,
   photoSkipKeyboard,
   submitKeyboard,
+  textPlaceConfirmKeyboard,
 } from "./keyboards.js";
 import {
   hasIntakeText,
@@ -26,6 +28,7 @@ import { resolveToggle } from "../settings/service.js";
 import {
   addLandmark,
   applyLabel,
+  captureGeocodedTruth,
   captureTruth,
   confirmLocation,
   needsMapPick,
@@ -35,6 +38,11 @@ import { generateRef } from "../cases/ref.js";
 import { saveDispatchedCase } from "../cases/service.js";
 import { Case } from "../models/Case.js";
 import { MockTicket } from "../models/MockTicket.js";
+import {
+  checkSubmitAllowed,
+  isDuplicateBurst,
+  markSubmitSuccess,
+} from "./abuse.js";
 
 function displayName(ctx) {
   return [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ");
@@ -60,7 +68,7 @@ async function classifyAndPreview(session, config) {
     model: config.openRouterModel,
   });
   const loc = session.draft.location;
-  const jurisdiction = resolveJurisdiction({
+  let jurisdiction = resolveJurisdiction({
     categoryId: classification.categoryId,
     lat: loc.lat,
     lng: loc.lng,
@@ -69,6 +77,13 @@ async function classifyAndPreview(session, config) {
       road: loc.road,
     },
   });
+  if (session.draft.forceTriage) {
+    jurisdiction = {
+      ...jurisdiction,
+      needsTriage: true,
+      reason: `${jurisdiction.reason} · Lokasi tidak pasti (mercu tanda teks) — perlu semakan ops.`,
+    };
+  }
   session.draft.classification = classification;
   session.draft.jurisdiction = jurisdiction;
   session.step = "awaiting_submit";
@@ -96,6 +111,7 @@ async function ingestLocation(ctx, session, config) {
   const base = session.draft.location?.confirmed ? replaceTruth(truth) : truth;
   const labeled = applyLabel(base, geocode);
   session.draft.location = labeled;
+  session.draft.forceTriage = false;
   session.step = "awaiting_confirm";
   await saveSession(session);
   await ctx.replyWithLocation(labeled.lat, labeled.lng);
@@ -103,6 +119,49 @@ async function ingestLocation(ctx, session, config) {
     reply_markup: confirmKeyboard(),
   });
   return true;
+}
+
+async function resolveTextPlace(ctx, session, config, placeText) {
+  await ctx.reply(MSG.locatingPlace);
+  const resolved = await resolveLandmarkWithLlm(placeText, {
+    apiKey: config.openRouterKey,
+    model: config.openRouterModel,
+  });
+  if (!resolved.ok || !resolved.searchQuery) {
+    session.draft.geocodeFails = (session.draft.geocodeFails || 0) + 1;
+    session.step = "awaiting_location";
+    await saveSession(session);
+    await ctx.reply(MSG.placeNotFound, { reply_markup: locationKeyboard() });
+    return;
+  }
+  const hit = await forwardGeocode(resolved.searchQuery, {
+    userAgent: config.nominatimUserAgent,
+  });
+  if (!hit || !Number.isFinite(hit.lat) || !Number.isFinite(hit.lng)) {
+    session.draft.geocodeFails = (session.draft.geocodeFails || 0) + 1;
+    session.step = "awaiting_location";
+    await saveSession(session);
+    await ctx.reply(MSG.placeNotFound, { reply_markup: locationKeyboard() });
+    return;
+  }
+  const source = resolved.method === "llm" ? "landmark_ai" : "text_geocode";
+  const truth = captureGeocodedTruth({
+    lat: hit.lat,
+    lng: hit.lng,
+    source,
+    landmark: placeText,
+  });
+  const labeled = applyLabel(truth, hit);
+  labeled.landmark = placeText;
+  session.draft.location = labeled;
+  session.draft.geocodeFails = 0;
+  session.draft.forceTriage = false;
+  session.step = "awaiting_confirm";
+  await saveSession(session);
+  await ctx.replyWithLocation(labeled.lat, labeled.lng);
+  await ctx.reply(`${MSG.placeConfirmHint}\n\n${formatConfirmMessage(labeled)}`, {
+    reply_markup: textPlaceConfirmKeyboard(),
+  });
 }
 
 export function createBot(config, { gateway } = {}) {
@@ -183,10 +242,43 @@ export function createBot(config, { gateway } = {}) {
   bot.callbackQuery("loc_no", async (ctx) => {
     const session = await loadSession(ctx.from.id);
     session.draft.location = null;
+    session.draft.forceTriage = false;
     session.step = "awaiting_location";
     await saveSession(session);
     await ctx.answerCallbackQuery();
     await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+  });
+
+  bot.callbackQuery("loc_retry_text", async (ctx) => {
+    const session = await loadSession(ctx.from.id);
+    session.draft.location = null;
+    session.draft.forceTriage = false;
+    session.step = "awaiting_location";
+    await saveSession(session);
+    await ctx.answerCallbackQuery();
+    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+  });
+
+  bot.callbackQuery("loc_uncertain", async (ctx) => {
+    const session = await loadSession(ctx.from.id);
+    if (!session.draft.location) {
+      await ctx.answerCallbackQuery({ text: "Lokasi belum dicari" });
+      return;
+    }
+    if (!hasIntakeText(session)) {
+      await ctx.answerCallbackQuery({ text: "Hantar keterangan dulu" });
+      return;
+    }
+    session.draft.forceTriage = true;
+    session.draft.location = confirmLocation(
+      session.draft.location,
+      "uncertain_text_geocode"
+    );
+    await classifyAndPreview(session, config);
+    await ctx.answerCallbackQuery();
+    await ctx.reply(previewMessage(session.draft), {
+      reply_markup: submitKeyboard(),
+    });
   });
 
   bot.callbackQuery("loc_yes_landmark", async (ctx) => {
@@ -215,6 +307,7 @@ export function createBot(config, { gateway } = {}) {
       await ctx.answerCallbackQuery({ text: "Hantar keterangan dulu" });
       return;
     }
+    session.draft.forceTriage = false;
     session.draft.location = confirmLocation(
       session.draft.location,
       "button_yes"
@@ -238,6 +331,12 @@ export function createBot(config, { gateway } = {}) {
     const loc = session.draft.location;
     if (!loc?.confirmed || !session.draft.jurisdiction || !gateway) {
       await ctx.answerCallbackQuery({ text: "Sesi tidak lengkap" });
+      return;
+    }
+    const gate = await checkSubmitAllowed(ctx.from.id);
+    if (!gate.ok) {
+      await ctx.answerCallbackQuery({ text: "Had dicapai" });
+      await ctx.reply(gate.message || MSG.rateLimited);
       return;
     }
     try {
@@ -268,6 +367,7 @@ export function createBot(config, { gateway } = {}) {
         draft: session.draft,
         dispatch,
       });
+      markSubmitSuccess(ctx.from.id);
       await resetSession(session);
       await ctx.answerCallbackQuery();
       await ctx.reply(
@@ -301,9 +401,11 @@ export function createBot(config, { gateway } = {}) {
     const fileId = largestPhotoId(ctx);
     if (fileId) session.draft.photoFileIds.push(fileId);
     const caption = ctx.message.caption?.trim();
-    if (caption) session.draft.text = caption;
+    if (caption) {
+      if (isDuplicateBurst(ctx.from.id, caption)) return;
+      session.draft.text = caption;
+    }
 
-    // Photo without caption (or still no text): keep the photo, ask for a short description
     if (!hasIntakeText(session)) {
       session.draft.askedPhoto = true;
       session.step = "awaiting_description";
@@ -322,6 +424,7 @@ export function createBot(config, { gateway } = {}) {
     if (ctx.message.text?.startsWith("/")) return;
     const session = await loadSession(ctx.from.id);
     const text = ctx.message.text.trim();
+    if (isDuplicateBurst(ctx.from.id, text)) return;
 
     if (session.step === "awaiting_landmark") {
       session.draft.location = addLandmark(session.draft.location, text);
@@ -341,7 +444,6 @@ export function createBot(config, { gateway } = {}) {
       return;
     }
 
-    // Photo already received; citizen types the problem in plain text
     if (session.step === "awaiting_description") {
       session.draft.text = text;
       session.step = "awaiting_location";
@@ -350,7 +452,7 @@ export function createBot(config, { gateway } = {}) {
       return;
     }
 
-    // Waiting for location: if description was lost / missing, accept text then re-ask pin
+    // Location step: typed landmark / place → AI + Nominatim
     if (
       session.step === "awaiting_location" ||
       session.step === "awaiting_confirm"
@@ -362,7 +464,7 @@ export function createBot(config, { gateway } = {}) {
         await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
         return;
       }
-      await ctx.reply(MSG.needLocation, { reply_markup: locationKeyboard() });
+      await resolveTextPlace(ctx, session, config, text);
       return;
     }
 

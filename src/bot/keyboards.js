@@ -20,6 +20,16 @@ export function confirmKeyboard() {
     .text("Ya, dan tambah mercu tanda", "loc_yes_landmark");
 }
 
+/** Confirm after AI/Nominatim landmark resolve — buttons only, no map drag. */
+export function textPlaceConfirmKeyboard() {
+  return new InlineKeyboard()
+    .text("Ya, lokasi ini betul", "loc_yes")
+    .row()
+    .text("Cuba cari semula", "loc_retry_text")
+    .row()
+    .text("Saya tidak pasti — teruskan", "loc_uncertain");
+}
+
 export function submitKeyboard() {
   return new InlineKeyboard()
     .text("Hantar aduan", "submit_yes")

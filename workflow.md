@@ -21,6 +21,10 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Photo without caption: keep image, ask plain-text description (`awaiting_description`) instead of forcing caption
 - [x] Fix mock ticket ID reuse (PEARL-0001 after restart) that made new cases inherit old "Selesai" status
 - [x] Cleanup script `scripts/fix-duplicate-tickets.js` to relink old shared PEARL-0001 tickets
+- [x] Admin SSE live toasts (Lihat laporan, 10s) on new cases
+- [x] Landmark text → LLM normalize → Nominatim pin + Ya / Cuba semula / Tidak pasti (triage)
+- [x] Case detail labels: Pin GPS · Disahkan oleh pelapor · Nama jalan laporan
+- [x] Abuse guards: rate limits, cooldown, burst soft-drop (`abuseGuardsEnabled`)
 
 ## How to run
 
@@ -36,5 +40,5 @@ Compose: `mongo` + `app` (dashboard baked into image via Dockerfile).
 
 ## Validation
 
-- `npm test` — 48 tests passing
+- `npm test` — 53 tests passing
 - `npm run build:dashboard` — Vite production build OK

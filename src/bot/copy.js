@@ -6,6 +6,8 @@ export function emptyDraft() {
     location: null,
     classification: null,
     jurisdiction: null,
+    geocodeFails: 0,
+    forceTriage: false,
   };
 }
 
@@ -26,9 +28,9 @@ export const MSG = {
     "Sila sediakan maklumat berikut:",
     "1. Keterangan masalah",
     "2. Gambar bukti (jika ada)",
-    "3. Lokasi kejadian (pin GPS)",
+    "3. Lokasi kejadian (GPS atau taip mercu tanda berdekatan)",
     "",
-    "Pin lokasi digunakan untuk menentukan agensi yang bertanggungjawab.",
+    "Lokasi digunakan untuk menentukan agensi yang bertanggungjawab.",
     "Taip /status untuk menyemak aduan anda.",
   ].join("\n"),
 
@@ -46,20 +48,33 @@ export const MSG = {
   ].join("\n"),
 
   askLocation: [
-    "Sila kongsi lokasi kejadian.",
+    "Sila beritahu lokasi kejadian.",
     "",
     "Anda boleh:",
-    "• Kongsi lokasi GPS semasa, atau",
-    "• Pilih titik tepat pada peta (Choose location).",
+    "1. Tekan *Kongsi lokasi GPS*, atau",
+    "2. Taip mercu tanda / tempat berdekatan.",
     "",
-    "Pin GPS digunakan untuk penyaluran kepada agensi yang berkenaan.",
-    "Nama jalan yang dicadangkan sistem mungkin merujuk jalan besar berdekatan — pin pada peta adalah rujukan utama.",
+    "Contoh: Padang Kota · Jetty Butterworth · TM Butterworth · Nasi kandar Kepala Batas · depan 7-Eleven Komtar",
+    "",
+    "Anda tidak perlu membuka atau menyeret peta — taip nama tempat sahaja jika lebih mudah.",
+  ].join("\n"),
+
+  locatingPlace: "Sedang mencari lokasi berdasarkan mercu tanda anda…",
+
+  placeNotFound: [
+    "Maaf, lokasi tersebut tidak dijumpai dengan tepat.",
+    "Sila taip mercu tanda lain yang lebih jelas, atau tekan *Kongsi lokasi GPS*.",
+  ].join("\n"),
+
+  placeConfirmHint: [
+    "Kami cadangkan pin ini berdasarkan tempat yang anda taip.",
+    "Adakah lokasi ini betul?",
+    "(Anda hanya perlu tekan butang di bawah — tidak perlu seret peta.)",
   ].join("\n"),
 
   coarseGps: [
     "Ketepatan GPS semasa kurang memadai (lebih 80 meter).",
-    "Sila pilih lokasi secara manual pada peta:",
-    "📎 → Location → Choose this location.",
+    "Sila taip mercu tanda berdekatan, atau pilih lokasi pada peta Telegram jika anda mahu.",
   ].join("\n"),
 
   askLandmark: [
@@ -73,8 +88,12 @@ export const MSG = {
   needText:
     "Sila taip keterangan masalah terlebih dahulu.\nContoh: jalan berlubang / sampah bertimbun / paip bocor.",
 
-  needLocation:
-    "Sila kongsi atau pilih lokasi kejadian terlebih dahulu melalui butang lokasi di bawah.",
+  needLocation: [
+    "Sila kongsi lokasi GPS, atau taip mercu tanda berdekatan.",
+    "Contoh: Padang Kota / Jetty Butterworth / depan 7-Eleven Komtar",
+  ].join("\n"),
+
+  rateLimited: "Had penghantaran dicapai. Sila cuba lagi kemudian.",
 };
 
 export function formatConfirmMessage(location) {
@@ -82,15 +101,21 @@ export function formatConfirmMessage(location) {
     location.accuracy_m != null
       ? ` (±${Math.round(location.accuracy_m)} m)`
       : "";
-  const name = location.display_name || "tiada cadangan nama";
+  const name = location.display_name || "tiada nama jalan";
+  const landmark = location.landmark
+    ? `\nMercu tanda anda: ${location.landmark}`
+    : "";
   return [
     "Sila sahkan lokasi aduan anda.",
     "",
     `Pin GPS: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}${acc}`,
-    `Cadangan nama: ${name}`,
+    `Nama jalan laporan: ${name}`,
+    landmark,
     "",
-    "Nota: Cadangan nama mungkin merujuk jalan besar berdekatan. Pin GPS adalah asas penyaluran agensi.",
-  ].join("\n");
+    "Nota: Nama jalan mungkin merujuk jalan besar berdekatan. Pin GPS digunakan untuk penyaluran agensi.",
+  ]
+    .filter((line) => line !== undefined)
+    .join("\n");
 }
 
 export function previewMessage(draft) {

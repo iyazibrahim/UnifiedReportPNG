@@ -8,6 +8,7 @@ import {
 import { loginAdmin, requireAdminAuth } from "./auth.js";
 import { AGENCIES, CATEGORIES } from "../jurisdiction/categories.js";
 import { fetchTelegramFile } from "./telegramMedia.js";
+import { subscribeCaseCreated } from "./events.js";
 
 function ticketBucket(status) {
   if (status === "in_progress") return "in_progress";
@@ -28,6 +29,34 @@ export function createAdminRouter(config) {
   });
 
   router.use(requireAdminAuth(config));
+
+  router.get("/events", (req, res) => {
+    res.setHeader("Content-Type", "text/event-stream");
+    res.setHeader("Cache-Control", "no-cache");
+    res.setHeader("Connection", "keep-alive");
+    res.setHeader("X-Accel-Buffering", "no");
+    if (typeof res.flushHeaders === "function") res.flushHeaders();
+    res.write(`event: connected\ndata: ${JSON.stringify({ ok: true })}\n\n`);
+
+    const heartbeat = setInterval(() => {
+      res.write(`: ping\n\n`);
+    }, 15000);
+
+    const unsub = subscribeCaseCreated((payload) => {
+      try {
+        res.write(
+          `event: case_created\ndata: ${JSON.stringify(payload)}\n\n`
+        );
+      } catch {
+        /* client gone */
+      }
+    });
+
+    req.on("close", () => {
+      clearInterval(heartbeat);
+      unsub();
+    });
+  });
 
   router.get("/stats", async (_req, res) => {
     const [total, byStatus, byAgency, byCategory, tickets, recent] =

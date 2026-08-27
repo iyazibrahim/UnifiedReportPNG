@@ -6,6 +6,7 @@ const defaultToggles = () => ({
   keywordFallbackEnabled: true,
   nominatimEnabled: true,
   mockDispatchEnabled: true,
+  abuseGuardsEnabled: true,
   pearl_mbpp: true,
   aspire_mbsp: true,
   myjalan: true,
@@ -22,6 +23,9 @@ const settingsSchema = new mongoose.Schema(
       nominatimUserAgent: { type: String, default: "" },
       telegramWebhookUrl: { type: String, default: "" },
       mockPortalPin: { type: String, default: "" },
+      abuseMaxPerHour: { type: String, default: "5" },
+      abuseMaxPerDay: { type: String, default: "15" },
+      abuseCooldownSec: { type: String, default: "60" },
     },
     secrets: {
       telegramBotToken: { type: String, default: "" },

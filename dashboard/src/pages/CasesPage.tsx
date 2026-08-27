@@ -32,9 +32,17 @@ export function OverviewPage() {
   const [error, setError] = useState("");
 
   useEffect(() => {
-    api<Stats>("/api/admin/stats")
-      .then(setStats)
-      .catch((e) => setError(e.message));
+    function load() {
+      api<Stats>("/api/admin/stats")
+        .then(setStats)
+        .catch((e) => setError(e.message));
+    }
+    load();
+    function onCreated() {
+      load();
+    }
+    window.addEventListener("urp:case_created", onCreated);
+    return () => window.removeEventListener("urp:case_created", onCreated);
   }, []);
 
   if (error) return <p className="text-[var(--color-destructive)]">{error}</p>;

@@ -35,5 +35,6 @@ describe("defaultToggles", () => {
     assert.equal(t.mockDispatchEnabled, true);
     assert.equal(t.pearl_mbpp, true);
     assert.equal(t.epintas, true);
+    assert.equal(t.abuseGuardsEnabled, true);
   });
 });

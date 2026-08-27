@@ -1,4 +1,5 @@
 import { generateRef } from "./ref.js";
+import { emitCaseCreated } from "../admin/events.js";
 
 export async function saveDispatchedCase({
   CaseModel,
@@ -24,5 +25,10 @@ export async function saveDispatchedCase({
     dispatch: { ...dispatch, requestPayload: dispatch.requestPayload },
     status: needsTriage ? "triaged" : "dispatched",
   });
+  try {
+    emitCaseCreated(doc);
+  } catch (err) {
+    console.error("emitCaseCreated failed:", err.message);
+  }
   return doc;
 }

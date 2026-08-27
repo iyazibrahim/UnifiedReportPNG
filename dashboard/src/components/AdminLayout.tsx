@@ -9,6 +9,7 @@ import {
 import { Button } from "@/components/ui/button";
 import { clearToken } from "@/lib/api";
 import { cn } from "@/lib/utils";
+import { CaseEventsHost } from "@/components/CaseEventsHost";
 
 const links = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
@@ -69,6 +70,7 @@ export function AdminLayout() {
       <main className="p-4 md:p-8">
         <Outlet />
       </main>
+      <CaseEventsHost />
     </div>
   );
 }

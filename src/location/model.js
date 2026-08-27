@@ -18,6 +18,21 @@ export function captureTruth(telegramLocation) {
   };
 }
 
+/** Truth from Nominatim forward geocode (landmark / typed place). */
+export function captureGeocodedTruth({ lat, lng, source = "text_geocode", landmark = null }) {
+  return {
+    lat: Number(lat),
+    lng: Number(lng),
+    accuracy_m: null,
+    source,
+    captured_at: new Date().toISOString(),
+    confirmed: false,
+    confirmed_at: null,
+    method: null,
+    landmark: landmark ? String(landmark).trim() : null,
+  };
+}
+
 export function needsMapPick(truth) {
   return (
     truth.source === "telegram_current" &&

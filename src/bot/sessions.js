@@ -10,6 +10,8 @@ export function normalizeDraft(draft) {
       ? draft.photoFileIds
       : [],
     text: draft?.text ? String(draft.text) : "",
+    geocodeFails: Number(draft?.geocodeFails) || 0,
+    forceTriage: Boolean(draft?.forceTriage),
   };
 }
 

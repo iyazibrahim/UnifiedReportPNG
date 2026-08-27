@@ -18,6 +18,9 @@ const CONFIG_KEYS = [
   "nominatimUserAgent",
   "telegramWebhookUrl",
   "mockPortalPin",
+  "abuseMaxPerHour",
+  "abuseMaxPerDay",
+  "abuseCooldownSec",
 ];
 
 const ENV_MAP = {
@@ -28,6 +31,9 @@ const ENV_MAP = {
   nominatimUserAgent: "NOMINATIM_USER_AGENT",
   telegramWebhookUrl: "TELEGRAM_WEBHOOK_URL",
   mockPortalPin: "MOCK_PORTAL_PIN",
+  abuseMaxPerHour: "ABUSE_MAX_PER_HOUR",
+  abuseMaxPerDay: "ABUSE_MAX_PER_DAY",
+  abuseCooldownSec: "ABUSE_COOLDOWN_SEC",
 };
 
 const CACHE_TTL_MS = 5_000;

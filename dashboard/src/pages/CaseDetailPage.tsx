@@ -168,7 +168,7 @@ export function CaseDetailPage() {
           </CardHeader>
           <CardContent className="space-y-3 text-sm">
             <div>
-              <p className="font-medium">Pin GPS (asas)</p>
+              <p className="font-medium">Pin GPS</p>
               <p>
                 {loc.lat != null && loc.lng != null
                   ? `${loc.lat}, ${loc.lng}`
@@ -178,14 +178,17 @@ export function CaseDetailPage() {
               </p>
             </div>
             <div>
-              <p className="font-medium">Pengesahan warga</p>
+              <p className="font-medium">Disahkan oleh pelapor</p>
+              <p className="text-xs text-[var(--color-muted-foreground)] mb-1">
+                Pelapor tekan Ya pada pin sebelum hantar
+              </p>
               <p>
                 {loc.confirmed ? "Ya" : "Tidak"}
                 {loc.method ? ` · ${loc.method}` : ""}
               </p>
             </div>
             <div>
-              <p className="font-medium">Nama cadangan</p>
+              <p className="font-medium">Nama jalan laporan</p>
               <p>{loc.display_name || "—"}</p>
               {loc.landmark ? (
                 <p className="text-[var(--color-muted-foreground)]">
