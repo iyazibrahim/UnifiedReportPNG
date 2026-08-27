@@ -31,6 +31,8 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Bot main menu: Aduan Baharu / Semak Aduan / Bantuan; GPS keyboard only on location step
 - [x] Landmark geocode: strip relative phrases (depan/berdekatan/traffic light) and retry Nominatim queries
 - [x] Penang landmark DB (curated + OSM/Google seed); fuzzy match before Nominatim; 5 daerah labels
+- [x] Landmark seed expanded (~1400+ OSM places: masjid/school/hospital/supermarket/mall)
+- [x] Worship categories fixed: `place_of_worship` classified by OSM religion/name (masjid, temple, church, shrine, gurdwara, place_of_worship) — seed reclassified
 - [x] Location boundary: allow ~3 km buffer, reject farther pins (GPS + typed)
 
 ## How to run
@@ -40,7 +42,9 @@ cp .env.example .env   # set TELEGRAM_BOT_TOKEN, OPS_PASSWORD, JWT_SECRET
 docker compose up -d --build
 # Seed landmark DB (curated file; optional OSM + Google Places)
 npm run seed:landmarks:file
-# Or full: GOOGLE_PLACES_API_KEY=... npm run seed:landmarks
+# Refresh seed from Overpass/Nominatim (writes data/landmarks.seed.json)
+npm run seed:landmarks:expand
+# Or full Mongo seed: GOOGLE_PLACES_API_KEY=... npm run seed:landmarks
 ```
 
 - Admin: http://localhost:3500/admin
@@ -56,3 +60,9 @@ Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins r
 
 - `npm test` — unit tests including landmark DB / daerah / boundary
 - `npm run build:dashboard` — Vite production build OK
+
+## Landmark coordinate fixes (2026-08-27)
+
+- Design Village Penang was wrongly pinned at Bertam / Kepala Batas (`spu`, 5.5245, 100.442). Official site + Nominatim confirm Bandar Cassia / Batu Kawan (`sps`, 5.2436662, 100.4364736). Aliases updated (batu kawan / bandar cassia); misleading bertam-only aliases removed.
+- Spot-check: Lotus's Kepala Batas remains correct in Bertam (`spu`). Entopia daerah/address corrected to Teluk Bahang / `barat_daya` (coords OK; label was wrong).
+- `locateDaerah(5.2436662, 100.4364736)` → `sps`.

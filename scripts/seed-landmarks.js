@@ -15,6 +15,10 @@ import { Landmark } from "../src/models/Landmark.js";
 import { locateDaerah } from "../src/jurisdiction/daerah.js";
 import { locateRegion } from "../src/jurisdiction/region.js";
 import { daerahLabel } from "../src/jurisdiction/daerah.js";
+import {
+  mapOsmCategory as mapOsmCategoryShared,
+  classifyWorshipFromName,
+} from "../src/location/landmarkCategory.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const SEED_PATH = path.join(__dirname, "../data/landmarks.seed.json");
@@ -76,16 +80,7 @@ function loadSeedFile() {
 }
 
 function mapOsmCategory(tags = {}) {
-  if (tags.amenity === "place_of_worship" || tags.religion === "muslim")
-    return "masjid";
-  if (tags.amenity === "school" || tags.amenity === "university" || tags.amenity === "college")
-    return "school";
-  if (tags.amenity === "hospital" || tags.amenity === "clinic") return "hospital";
-  if (tags.shop === "supermarket" || tags.shop === "convenience") return "supermarket";
-  if (tags.shop === "mall" || tags.shop === "department_store") return "mall";
-  if (tags.building === "apartments" || tags.building === "residential")
-    return "apartment";
-  return "landmark";
+  return mapOsmCategoryShared(tags);
 }
 
 async function fetchOsmLandmarks(fetchImpl = fetch) {
@@ -113,7 +108,11 @@ out center tags;
 
   const res = await fetchImpl(OVERPASS_URL, {
     method: "POST",
-    headers: { "Content-Type": "application/x-www-form-urlencoded" },
+    headers: {
+      "Content-Type": "application/x-www-form-urlencoded",
+      Accept: "application/json",
+      "User-Agent": "UnifiedReportPenang/1.0 (seed-landmarks)",
+    },
     body: `data=${encodeURIComponent(query)}`,
   });
   if (!res.ok) {
@@ -143,9 +142,22 @@ out center tags;
   return rows;
 }
 
+function mapGooglePlaceCategory(type, name = "") {
+  if (type === "mosque") return "masjid";
+  if (type === "church") return "church";
+  if (type === "hindu_temple") return "temple";
+  if (type === "place_of_worship") return classifyWorshipFromName(name);
+  if (type === "shopping_mall") return "mall";
+  if (type === "university") return "school";
+  return type;
+}
+
 async function fetchGoogleNearby(apiKey, fetchImpl = fetch) {
   const types = [
     "mosque",
+    "church",
+    "hindu_temple",
+    "place_of_worship",
     "school",
     "hospital",
     "supermarket",
@@ -177,19 +189,11 @@ async function fetchGoogleNearby(apiKey, fetchImpl = fetch) {
           const plat = p.geometry?.location?.lat;
           const plng = p.geometry?.location?.lng;
           if (!Number.isFinite(plat) || !Number.isFinite(plng)) continue;
-          const cat =
-            type === "mosque"
-              ? "masjid"
-              : type === "shopping_mall"
-                ? "mall"
-                : type === "university"
-                  ? "school"
-                  : type;
           rows.push(
             enrichMeta({
               name: p.name,
               aliases: [],
-              category: cat,
+              category: mapGooglePlaceCategory(type, p.name),
               lat: plat,
               lng: plng,
               source: "google",

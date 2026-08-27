@@ -84,8 +84,10 @@ describe("matchLandmarkList", () => {
 
 describe("landmarks seed fixture", () => {
   it("has curated entries with daerah for CI dry-run", () => {
-    assert.ok(seed.length >= 10);
+    assert.ok(seed.length >= 500, `expected large seed, got ${seed.length}`);
     assert.ok(seed.every((x) => x.name && Number.isFinite(x.lat)));
     assert.ok(seed.some((x) => x.daerah === "barat_daya"));
+    assert.ok(seed.some((x) => x.category === "masjid"));
+    assert.ok(seed.some((x) => x.category === "school"));
   });
 });

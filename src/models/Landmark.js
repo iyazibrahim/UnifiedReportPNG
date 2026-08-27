@@ -1,4 +1,5 @@
 import mongoose from "mongoose";
+import { LANDMARK_CATEGORIES } from "../location/landmarkCategory.js";
 
 const landmarkSchema = new mongoose.Schema(
   {
@@ -7,6 +8,7 @@ const landmarkSchema = new mongoose.Schema(
     category: {
       type: String,
       default: "landmark",
+      enum: LANDMARK_CATEGORIES,
       index: true,
     },
     lat: { type: Number, required: true },
