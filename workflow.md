@@ -14,6 +14,10 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] React dashboard (`dashboard/`): admin + per-agency mock portals
 - [x] Express serves `dashboard/dist`; `/ops` → `/admin`
 - [x] Fix photo+caption session loop (Mongoose Mixed `draft` now markModified via `saveSession`)
+- [x] Case detail UX: back button, OSM map, photo proxy/thumbnails, clearer lokasi wording
+- [x] Formal BM Telegram bot copy + status-update notify template
+- [x] Mock portals: Dashboard/Inbox nav; Telegram notify reporter on status PATCH
+- [x] Overview: KPI cards, category/status donuts, animated agency flow; stats API extended
 
 ## How to run
 
@@ -29,5 +33,5 @@ Compose: `mongo` + `app` (dashboard baked into image via Dockerfile).
 
 ## Validation
 
-- `npm test` — 46 tests passing
+- `npm test` — 48 tests passing
 - `npm run build:dashboard` — Vite production build OK

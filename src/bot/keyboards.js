@@ -1,7 +1,10 @@
 import { InlineKeyboard, Keyboard } from "grammy";
 
 export function locationKeyboard() {
-  return new Keyboard().requestLocation("Kongsi lokasi GPS").resized().oneTime();
+  return new Keyboard()
+    .requestLocation("Kongsi lokasi GPS")
+    .resized()
+    .oneTime();
 }
 
 export function photoSkipKeyboard() {
@@ -10,15 +13,15 @@ export function photoSkipKeyboard() {
 
 export function confirmKeyboard() {
   return new InlineKeyboard()
-    .text("Betul lokasi ini", "loc_yes")
+    .text("Ya, lokasi ini betul", "loc_yes")
     .row()
-    .text("Bukan — pilih semula", "loc_no")
+    .text("Tidak — pilih semula", "loc_no")
     .row()
-    .text("Betul, tambah landmark", "loc_yes_landmark");
+    .text("Ya, dan tambah mercu tanda", "loc_yes_landmark");
 }
 
 export function submitKeyboard() {
   return new InlineKeyboard()
-    .text("Hantar", "submit_yes")
-    .text("Batal", "submit_cancel");
+    .text("Hantar aduan", "submit_yes")
+    .text("Batalkan aduan ini", "submit_cancel");
 }

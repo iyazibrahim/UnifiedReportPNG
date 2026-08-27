@@ -1,9 +1,11 @@
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
-import { api, AGENCY_THEME, STATUS_BM } from "@/lib/api";
+import { ArrowLeft } from "lucide-react";
+import { api, getToken, AGENCY_THEME, STATUS_BM } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/misc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { cn } from "@/lib/utils";
 
 type Detail = {
   case: {
@@ -29,10 +31,26 @@ type Detail = {
   } | null;
 };
 
+function osmEmbedUrl(lat: number, lng: number, delta = 0.008) {
+  const bbox = [
+    lng - delta,
+    lat - delta,
+    lng + delta,
+    lat + delta,
+  ].join("%2C");
+  return `https://www.openstreetmap.org/export/embed.html?bbox=${bbox}&layer=mapnik&marker=${lat}%2C${lng}`;
+}
+
+function photoUrl(ref: string, fileId: string) {
+  const token = getToken() || "";
+  return `/api/admin/cases/${encodeURIComponent(ref)}/photos/${encodeURIComponent(fileId)}?access_token=${encodeURIComponent(token)}`;
+}
+
 export function CaseDetailPage() {
   const { ref } = useParams();
   const [data, setData] = useState<Detail | null>(null);
   const [error, setError] = useState("");
+  const [lightbox, setLightbox] = useState<string | null>(null);
 
   useEffect(() => {
     if (!ref) return;
@@ -40,6 +58,11 @@ export function CaseDetailPage() {
       .then(setData)
       .catch((e) => setError(e.message));
   }, [ref]);
+
+  const photoIds = useMemo(
+    () => data?.case.intake?.photoFileIds || [],
+    [data]
+  );
 
   if (error) return <p className="text-[var(--color-destructive)]">{error}</p>;
   if (!data) return <p>Loading…</p>;
@@ -51,6 +74,7 @@ export function CaseDetailPage() {
     display_name?: string;
     landmark?: string;
     confirmed?: boolean;
+    method?: string;
     source?: string;
     accuracy_m?: number;
   };
@@ -65,9 +89,15 @@ export function CaseDetailPage() {
   return (
     <div className="space-y-6">
       <div className="flex flex-wrap items-start justify-between gap-3">
-        <div>
-          <Link to="/admin/cases" className="text-sm text-[var(--color-muted-foreground)]">
-            ← Cases
+        <div className="space-y-2">
+          <Link
+            to="/admin/cases"
+            className={cn(
+              "inline-flex h-8 items-center justify-center gap-2 rounded-md border border-[var(--color-border)] bg-[var(--color-card)] px-3 text-xs font-medium hover:bg-[var(--color-accent)]"
+            )}
+          >
+            <ArrowLeft className="h-4 w-4" />
+            Cases
           </Link>
           <h1 className="text-2xl font-semibold">{c.ref}</h1>
           <p className="text-sm text-[var(--color-muted-foreground)]">
@@ -77,7 +107,7 @@ export function CaseDetailPage() {
         <div className="flex gap-2">
           <Badge>{c.status}</Badge>
           {portal ? (
-            <Button asChild={false} onClick={() => (window.location.href = portal)}>
+            <Button onClick={() => (window.location.href = portal)}>
               View in {AGENCY_THEME[agencyId]?.short || "portal"}
             </Button>
           ) : null}
@@ -89,41 +119,96 @@ export function CaseDetailPage() {
           <CardHeader>
             <CardTitle>Intake</CardTitle>
           </CardHeader>
-          <CardContent className="space-y-2 text-sm">
+          <CardContent className="space-y-3 text-sm">
             <p>{c.intake?.text || "—"}</p>
             <p className="text-[var(--color-muted-foreground)]">
-              Reporter: {c.reporter?.displayName || "—"} · Photos:{" "}
-              {c.intake?.photoFileIds?.length || 0}
+              Reporter: {c.reporter?.displayName || "—"}
             </p>
             <p>
               Category: {String(c.classification?.categoryLabel || "—")} (
               {String(c.classification?.method || "")})
             </p>
             <p>Agency: {c.jurisdiction?.agencyLabel}</p>
+            {photoIds.length > 0 ? (
+              <div>
+                <p className="mb-2 font-medium">Photos ({photoIds.length})</p>
+                <div className="flex flex-wrap gap-2">
+                  {photoIds.map((id) => {
+                    const src = photoUrl(c.ref, id);
+                    return (
+                      <button
+                        key={id}
+                        type="button"
+                        className="h-20 w-20 overflow-hidden rounded-md border border-[var(--color-border)]"
+                        onClick={() => setLightbox(src)}
+                      >
+                        <img
+                          src={src}
+                          alt="Evidence"
+                          className="h-full w-full object-cover"
+                        />
+                      </button>
+                    );
+                  })}
+                </div>
+              </div>
+            ) : (
+              <p className="text-[var(--color-muted-foreground)]">No photos</p>
+            )}
           </CardContent>
         </Card>
 
         <Card>
           <CardHeader>
-            <CardTitle>Location (truth / confirm / label)</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-2 text-sm">
-            <p>
-              Truth: {loc.lat}, {loc.lng}
-              {loc.accuracy_m != null ? ` (±${loc.accuracy_m}m)` : ""} · {loc.source}
+            <CardTitle>Lokasi laporan</CardTitle>
+            <p className="text-xs font-normal text-[var(--color-muted-foreground)]">
+              Pin GPS digunakan untuk penyaluran agensi; nama jalan hanya
+              rujukan (mungkin jalan besar berdekatan).
             </p>
-            <p>Confirmed: {loc.confirmed ? "yes" : "no"}</p>
-            <p>Label: {loc.display_name || "—"}</p>
-            <p>Landmark: {loc.landmark || "—"}</p>
-            {loc.lat != null ? (
-              <a
-                className="underline"
-                href={`https://www.google.com/maps?q=${loc.lat},${loc.lng}`}
-                target="_blank"
-                rel="noreferrer"
-              >
-                Open in Google Maps
-              </a>
+          </CardHeader>
+          <CardContent className="space-y-3 text-sm">
+            <div>
+              <p className="font-medium">Pin GPS (asas)</p>
+              <p>
+                {loc.lat != null && loc.lng != null
+                  ? `${loc.lat}, ${loc.lng}`
+                  : "—"}
+                {loc.accuracy_m != null ? ` (±${loc.accuracy_m}m)` : ""}
+                {loc.source ? ` · ${loc.source}` : ""}
+              </p>
+            </div>
+            <div>
+              <p className="font-medium">Pengesahan warga</p>
+              <p>
+                {loc.confirmed ? "Ya" : "Tidak"}
+                {loc.method ? ` · ${loc.method}` : ""}
+              </p>
+            </div>
+            <div>
+              <p className="font-medium">Nama cadangan</p>
+              <p>{loc.display_name || "—"}</p>
+              {loc.landmark ? (
+                <p className="text-[var(--color-muted-foreground)]">
+                  Mercu tanda: {loc.landmark}
+                </p>
+              ) : null}
+            </div>
+            {loc.lat != null && loc.lng != null ? (
+              <>
+                <iframe
+                  title="OSM map"
+                  className="h-[220px] w-full rounded-md border border-[var(--color-border)]"
+                  src={osmEmbedUrl(Number(loc.lat), Number(loc.lng))}
+                />
+                <a
+                  className="inline-block underline"
+                  href={`https://www.google.com/maps?q=${loc.lat},${loc.lng}`}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open in Google Maps
+                </a>
+              </>
             ) : null}
           </CardContent>
         </Card>
@@ -144,7 +229,10 @@ export function CaseDetailPage() {
                 </p>
                 <ul className="space-y-1">
                   {(data.ticket.statusHistory || []).map((h, i) => (
-                    <li key={i} className="text-[var(--color-muted-foreground)]">
+                    <li
+                      key={i}
+                      className="text-[var(--color-muted-foreground)]"
+                    >
                       {STATUS_BM[h.status] || h.status} — {h.note}{" "}
                       {h.at ? `(${new Date(h.at).toLocaleString()})` : ""}
                     </li>
@@ -152,11 +240,29 @@ export function CaseDetailPage() {
                 </ul>
               </>
             ) : (
-              <p className="text-[var(--color-muted-foreground)]">No mock ticket linked</p>
+              <p className="text-[var(--color-muted-foreground)]">
+                No mock ticket linked
+              </p>
             )}
           </CardContent>
         </Card>
       </div>
+
+      {lightbox ? (
+        <div
+          className="fixed inset-0 z-50 flex items-center justify-center bg-black/70 p-4"
+          role="dialog"
+          onClick={() => setLightbox(null)}
+          onKeyDown={(e) => e.key === "Escape" && setLightbox(null)}
+        >
+          <img
+            src={lightbox}
+            alt="Full size"
+            className="max-h-[90vh] max-w-[90vw] rounded-md object-contain"
+            onClick={(e) => e.stopPropagation()}
+          />
+        </div>
+      ) : null}
     </div>
   );
 }

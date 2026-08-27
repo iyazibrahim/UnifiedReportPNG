@@ -6,7 +6,14 @@ import {
   patchSettings,
 } from "../settings/service.js";
 import { loginAdmin, requireAdminAuth } from "./auth.js";
-import { AGENCIES } from "../jurisdiction/categories.js";
+import { AGENCIES, CATEGORIES } from "../jurisdiction/categories.js";
+import { fetchTelegramFile } from "./telegramMedia.js";
+
+function ticketBucket(status) {
+  if (status === "in_progress") return "in_progress";
+  if (status === "resolved" || status === "rejected") return "closed";
+  return "open";
+}
 
 export function createAdminRouter(config) {
   const router = Router();
@@ -23,27 +30,50 @@ export function createAdminRouter(config) {
   router.use(requireAdminAuth(config));
 
   router.get("/stats", async (_req, res) => {
-    const [total, byStatus, byAgency, recent] = await Promise.all([
-      Case.countDocuments(),
-      Case.aggregate([
-        { $group: { _id: "$status", count: { $sum: 1 } } },
-      ]),
-      Case.aggregate([
-        {
-          $group: {
-            _id: "$jurisdiction.agencyId",
-            count: { $sum: 1 },
+    const [total, byStatus, byAgency, byCategory, tickets, recent] =
+      await Promise.all([
+        Case.countDocuments(),
+        Case.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+        Case.aggregate([
+          { $group: { _id: "$jurisdiction.agencyId", count: { $sum: 1 } } },
+        ]),
+        Case.aggregate([
+          {
+            $group: {
+              _id: "$classification.categoryId",
+              count: { $sum: 1 },
+            },
           },
-        },
-      ]),
-      Case.find().sort({ createdAt: -1 }).limit(8).lean(),
-    ]);
+        ]),
+        MockTicket.find().select("status adapterId").lean(),
+        Case.find().sort({ createdAt: -1 }).limit(8).lean(),
+      ]);
+
+    const byTicketStatus = { open: 0, in_progress: 0, closed: 0 };
+    for (const t of tickets) {
+      byTicketStatus[ticketBucket(t.status)] += 1;
+    }
+    if (total > tickets.length) {
+      byTicketStatus.open += total - tickets.length;
+    }
+
+    const byCategoryLabeled = {};
+    for (const row of byCategory) {
+      const id = row._id || "unknown";
+      const label = CATEGORIES[id]?.label || id;
+      byCategoryLabeled[label] = row.count;
+    }
+
     res.json({
       total,
-      byStatus: Object.fromEntries(byStatus.map((r) => [r._id || "unknown", r.count])),
+      byStatus: Object.fromEntries(
+        byStatus.map((r) => [r._id || "unknown", r.count])
+      ),
       byAgency: Object.fromEntries(
         byAgency.map((r) => [r._id || "unknown", r.count])
       ),
+      byCategory: byCategoryLabeled,
+      byTicketStatus,
       recent,
       agencies: AGENCIES,
     });
@@ -92,6 +122,26 @@ export function createAdminRouter(config) {
     res.json({ case: caseDoc, ticket });
   });
 
+  router.get("/cases/:ref/photos/:fileId", async (req, res) => {
+    try {
+      const caseDoc = await Case.findOne({
+        ref: String(req.params.ref).toUpperCase(),
+      }).lean();
+      if (!caseDoc) return res.status(404).json({ error: "Not found" });
+      const fileId = decodeURIComponent(String(req.params.fileId));
+      const allowed = caseDoc.intake?.photoFileIds || [];
+      if (!allowed.includes(fileId)) {
+        return res.status(403).json({ error: "Photo not on this case" });
+      }
+      const { buffer, contentType } = await fetchTelegramFile(fileId);
+      res.setHeader("Content-Type", contentType);
+      res.setHeader("Cache-Control", "private, max-age=3600");
+      res.send(buffer);
+    } catch (err) {
+      res.status(502).json({ error: err.message });
+    }
+  });
+
   router.get("/settings", async (_req, res) => {
     res.json(await getPublicSettings());
   });
@@ -120,3 +170,5 @@ export function createAdminRouter(config) {
 
   return router;
 }
+
+export { ticketBucket };

@@ -53,8 +53,14 @@ export function verifyToken(token, secret) {
 export function requireAdminAuth(config) {
   return (req, res, next) => {
     const header = req.headers.authorization || "";
-    const [scheme, token] = header.split(" ");
-    if (scheme !== "Bearer" || !token) {
+    const [scheme, bearer] = header.split(" ");
+    const token =
+      scheme === "Bearer" && bearer
+        ? bearer
+        : req.query.access_token
+          ? String(req.query.access_token)
+          : null;
+    if (!token) {
       return res.status(401).json({ error: "Unauthorized" });
     }
     const claims = verifyToken(token, config.jwtSecret);

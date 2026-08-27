@@ -9,43 +9,100 @@ export function emptyDraft() {
   };
 }
 
+const STATUS_BM = {
+  received: "Diterima",
+  in_progress: "Dalam tindakan",
+  resolved: "Selesai",
+  rejected: "Ditolak",
+};
+
 export const MSG = {
   welcome: [
-    "Salam. Ini saluran aduan bersatu Pulau Pinang (MVP Telegram).",
+    "Assalamualaikum / Selamat sejahtera.",
     "",
-    "Hantar:",
-    "1) keterangan masalah",
-    "2) foto (kalau ada)",
-    "3) lokasi (kongsi GPS atau pilih pada peta)",
+    "Ini ialah *Saluran Aduan Bersatu Pulau Pinang* (MVP Telegram).",
+    "Anda boleh menghantar aduan awam tanpa memuat turun aplikasi baharu.",
     "",
-    "Tak perlu app baru. WhatsApp akan datang kemudian.",
-    "Taip /status untuk semak aduan anda.",
+    "Sila sediakan maklumat berikut:",
+    "1. Keterangan masalah",
+    "2. Gambar bukti (jika ada)",
+    "3. Lokasi kejadian (pin GPS)",
+    "",
+    "Pin lokasi digunakan untuk menentukan agensi yang bertanggungjawab.",
+    "Taip /status untuk menyemak aduan anda.",
   ].join("\n"),
-  askPhoto: "Ada foto? Hantar gambar, atau tekan Tiada foto.",
-  askLocation:
-    "Sila kongsi lokasi GPS, atau pilih titik pada peta (Choose location). Pin pada peta adalah lokasi sebenar — nama jalan mungkin jalan besar berdekatan.",
-  coarseGps:
-    "GPS kurang tepat (lebih 80 m). Sila pilih lokasi pada peta (ikon 📎 → Location → Choose this location).",
-  askLandmark: "Tulis landmark ringkas, cth: hadapan 7-Eleven / tiang lampu no. 12",
-  cancelled: "Aduan dibatalkan. Hantar keterangan baru untuk mula semula.",
-  needText: "Sila hantar keterangan masalah dahulu (teks atau caption pada foto).",
-  needLocation: "Sila hantar lokasi dulu (kongsi atau pilih pada peta).",
+
+  askPhoto: [
+    "Adakah anda mempunyai gambar sebagai bukti?",
+    "Sila hantar gambar, atau pilih *Tiada foto* untuk meneruskan.",
+    "Gambar membantu pegawai mengenal pasti keadaan di lapangan.",
+  ].join("\n"),
+
+  askLocation: [
+    "Sila kongsi lokasi kejadian.",
+    "",
+    "Anda boleh:",
+    "• Kongsi lokasi GPS semasa, atau",
+    "• Pilih titik tepat pada peta (Choose location).",
+    "",
+    "Pin GPS digunakan untuk penyaluran kepada agensi yang berkenaan.",
+    "Nama jalan yang dicadangkan sistem mungkin merujuk jalan besar berdekatan — pin pada peta adalah rujukan utama.",
+  ].join("\n"),
+
+  coarseGps: [
+    "Ketepatan GPS semasa kurang memadai (lebih 80 meter).",
+    "Sila pilih lokasi secara manual pada peta:",
+    "📎 → Location → Choose this location.",
+  ].join("\n"),
+
+  askLandmark: [
+    "Sila nyatakan mercu tanda ringkas (pilihan) untuk memudahkan pegawai mencari lokasi,",
+    "contoh: hadapan 7-Eleven / tiang lampu no. 12.",
+  ].join("\n"),
+
+  cancelled:
+    "Aduan ini telah dibatalkan. Sila hantar keterangan baharu untuk memulakan aduan semula.",
+
+  needText:
+    "Sila hantar keterangan masalah terlebih dahulu (teks, atau caption pada gambar).",
+
+  needLocation:
+    "Sila kongsi atau pilih lokasi kejadian terlebih dahulu melalui butang lokasi di bawah.",
 };
+
+export function formatConfirmMessage(location) {
+  const acc =
+    location.accuracy_m != null
+      ? ` (±${Math.round(location.accuracy_m)} m)`
+      : "";
+  const name = location.display_name || "tiada cadangan nama";
+  return [
+    "Sila sahkan lokasi aduan anda.",
+    "",
+    `Pin GPS: ${location.lat.toFixed(4)}, ${location.lng.toFixed(4)}${acc}`,
+    `Cadangan nama: ${name}`,
+    "",
+    "Nota: Cadangan nama mungkin merujuk jalan besar berdekatan. Pin GPS adalah asas penyaluran agensi.",
+  ].join("\n");
+}
 
 export function previewMessage(draft) {
   const j = draft.jurisdiction;
   const c = draft.classification;
   const triage = j.needsTriage
-    ? "\n\nNota: kes ini ditanda triaj (agensi mungkin perlu semak semula)."
+    ? "\n\nNota: Aduan ini ditanda untuk triaj lanjut oleh pihak negeri."
     : "";
   return [
-    "Ringkasan aduan:",
+    "Ringkasan aduan anda:",
+    "",
     `Kategori: ${c.categoryLabel}`,
-    `Agensi: ${j.agencyLabel}`,
-    `Kenapa: ${j.reason}`,
+    `Agensi dicadangkan: ${j.agencyLabel}`,
+    `Sebab penyaluran: ${j.reason}`,
     triage,
     "",
-    "Tekan Hantar untuk teruskan (MVP: tiket agensi adalah simulasi).",
+    "Sila tekan *Hantar* untuk mengemukakan aduan,",
+    "atau *Batal* untuk membatalkan aduan ini.",
+    "(MVP: tiket agensi adalah simulasi sehingga API rasmi disambungkan.)",
   ]
     .filter((line) => line !== undefined)
     .join("\n");
@@ -53,16 +110,33 @@ export function previewMessage(draft) {
 
 export function submittedMessage(caseDoc) {
   const triage = caseDoc.jurisdiction?.needsTriage
-    ? "\nStatus: triaj ePINTAS / semakan lanjut."
+    ? "\nStatus: dalam triaj / semakan lanjut."
     : "";
   return [
-    "Aduan dihantar.",
+    "Aduan anda telah diterima. Terima kasih.",
     "",
-    `Rujukan: ${caseDoc.ref}`,
+    `No. rujukan: ${caseDoc.ref}`,
     `Agensi: ${caseDoc.jurisdiction.agencyLabel}`,
-    `Tiket mock: ${caseDoc.dispatch.externalRef}`,
+    `No. tiket (simulasi): ${caseDoc.dispatch.externalRef}`,
     triage,
     "",
-    "(Ini MVP — tiket agensi adalah simulasi sehingga API rasmi disambung.)",
+    "Anda akan menerima pemberitahuan di Telegram apabila status aduan dikemas kini.",
+    "Taip /status untuk menyemak semula.",
   ].join("\n");
 }
+
+export function statusUpdateMessage({ ref, agencyLabel, status, note }) {
+  const label = STATUS_BM[status] || status;
+  const lines = [
+    "Kemaskini status aduan",
+    "",
+    `No. rujukan: ${ref}`,
+    `Agensi: ${agencyLabel}`,
+    `Status baharu: ${label}`,
+  ];
+  if (note) lines.push(`Catatan: ${note}`);
+  lines.push("", "Terima kasih atas kerjasama anda.");
+  return lines.join("\n");
+}
+
+export { STATUS_BM };

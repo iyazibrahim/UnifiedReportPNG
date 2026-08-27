@@ -4,7 +4,9 @@ import {
   MockTicket,
   MOCK_TICKET_STATUSES,
 } from "../models/MockTicket.js";
+import { Case } from "../models/Case.js";
 import { resolveConfig } from "../settings/service.js";
+import { notifyReporterStatusUpdate } from "../notify/telegram.js";
 
 const STATUS_LABEL = {
   received: "Diterima",
@@ -35,7 +37,11 @@ async function optionalPinGuard(req, res, next) {
   next();
 }
 
-export function createMockRouter() {
+/**
+ * @param {{ sendMessage?: (chatId: string|number, text: string) => Promise<unknown> }} [opts]
+ */
+export function createMockRouter(opts = {}) {
+  const { sendMessage } = opts;
   const router = Router({ mergeParams: true });
 
   router.get("/agencies", (_req, res) => {
@@ -122,7 +128,16 @@ export function createMockRouter() {
         ticket.assignedUnit = String(req.body.assignedUnit);
       }
       await ticket.save();
-      res.json({ agency: AGENCIES[req.agencyId], ticket: ticket.toObject() });
+
+      const ticketObj = ticket.toObject();
+      if (ticket.caseRef) {
+        const caseDoc = await Case.findOne({ ref: ticket.caseRef }).lean();
+        if (caseDoc) {
+          await notifyReporterStatusUpdate(sendMessage, caseDoc, ticketObj);
+        }
+      }
+
+      res.json({ agency: AGENCIES[req.agencyId], ticket: ticketObj });
     }
   );
 

@@ -1,5 +1,5 @@
-import { useEffect, useState } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
+import { useEffect, useState } from "react";
 import { api, AGENCY_THEME, STATUS_BM } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/misc";
@@ -12,12 +12,71 @@ type Ticket = {
   createdAt?: string;
   payload?: {
     intake?: { text?: string };
-    location?: { lat?: number; lng?: number; display_name?: string; landmark?: string };
+    location?: {
+      lat?: number;
+      lng?: number;
+      display_name?: string;
+      landmark?: string;
+    };
     classification?: { categoryLabel?: string };
     jurisdiction?: { reason?: string };
   };
   statusHistory?: Array<{ status: string; note?: string; at?: string }>;
 };
+
+function MockHeader({
+  theme,
+  agencyId,
+  title,
+  subtitle,
+  showInbox,
+}: {
+  theme: { accent: string; label: string; short: string };
+  agencyId: string;
+  title: string;
+  subtitle?: string;
+  showInbox?: boolean;
+}) {
+  return (
+    <header
+      className="sticky top-0 z-10 px-4 py-4 text-white"
+      style={{ background: theme.accent }}
+    >
+      <div className="mb-2 flex flex-wrap gap-2">
+        <Link
+          to="/admin"
+          className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium"
+        >
+          Dashboard
+        </Link>
+        {showInbox ? (
+          <Link
+            to={`/mock/${agencyId}`}
+            className="rounded-full bg-white/20 px-3 py-1 text-xs font-medium"
+          >
+            Inbox
+          </Link>
+        ) : null}
+      </div>
+      <div className="text-xs uppercase tracking-widest opacity-80">
+        Mock agency portal
+      </div>
+      <h1 className="text-xl font-semibold">{title}</h1>
+      {subtitle ? <p className="text-sm opacity-90">{subtitle}</p> : null}
+      <div className="mt-3 flex flex-wrap gap-2">
+        {Object.keys(AGENCY_THEME).map((id) => (
+          <Link
+            key={id}
+            to={`/mock/${id}`}
+            className="rounded-full bg-white/15 px-2 py-0.5 text-xs"
+          >
+            {AGENCY_THEME[id].short}
+          </Link>
+        ))}
+      </div>
+    </header>
+  );
+}
 
 export function MockInboxPage() {
   const { agencyId = "" } = useParams();
@@ -42,29 +101,12 @@ export function MockInboxPage() {
       className="min-h-screen mx-auto max-w-lg"
       style={{ ["--agency" as string]: theme.accent }}
     >
-      <header
-        className="sticky top-0 z-10 px-4 py-4 text-white"
-        style={{ background: theme.accent }}
-      >
-        <div className="text-xs uppercase tracking-widest opacity-80">
-          Mock agency portal
-        </div>
-        <h1 className="text-xl font-semibold">{theme.label}</h1>
-        <p className="text-sm opacity-90">
-          Tickets routed from Unified Report Penang
-        </p>
-        <div className="mt-3 flex flex-wrap gap-2">
-          {Object.keys(AGENCY_THEME).map((id) => (
-            <Link
-              key={id}
-              to={`/mock/${id}`}
-              className="rounded-full bg-white/15 px-2 py-0.5 text-xs"
-            >
-              {AGENCY_THEME[id].short}
-            </Link>
-          ))}
-        </div>
-      </header>
+      <MockHeader
+        theme={theme}
+        agencyId={agencyId}
+        title={theme.label}
+        subtitle="Tickets routed from Unified Report Penang"
+      />
 
       <main className="space-y-3 p-4">
         {error ? <p className="text-red-700 text-sm">{error}</p> : null}
@@ -153,13 +195,13 @@ export function MockTicketPage() {
 
   return (
     <div className="min-h-screen mx-auto max-w-lg">
-      <header className="px-4 py-4 text-white" style={{ background: theme.accent }}>
-        <Link to={`/mock/${agencyId}`} className="text-sm opacity-90">
-          ← Inbox
-        </Link>
-        <h1 className="text-xl font-semibold">{ticket?.externalRef}</h1>
-        <p className="text-sm opacity-90">{theme.label}</p>
-      </header>
+      <MockHeader
+        theme={theme}
+        agencyId={agencyId}
+        title={ticket?.externalRef || externalRef}
+        subtitle={theme.label}
+        showInbox
+      />
       <main className="space-y-4 p-4">
         {error ? <p className="text-red-700 text-sm">{error}</p> : null}
         {ticket ? (
@@ -190,7 +232,10 @@ export function MockTicketPage() {
                 ) : null}
                 <p>
                   Case ref:{" "}
-                  <Link className="underline" to={`/admin/cases/${ticket.caseRef}`}>
+                  <Link
+                    className="underline"
+                    to={`/admin/cases/${ticket.caseRef}`}
+                  >
                     {ticket.caseRef}
                   </Link>
                 </p>

@@ -3,21 +3,10 @@ import { classifyReport } from "../classify/classify.js";
 import { resolveJurisdiction } from "../jurisdiction/resolver.js";
 import { reverseGeocode } from "../location/geocode.js";
 import {
-  addLandmark,
-  applyLabel,
-  captureTruth,
-  confirmLocation,
-  formatConfirmMessage,
-  needsMapPick,
-  replaceTruth,
-} from "../location/model.js";
-import { generateRef } from "../cases/ref.js";
-import { saveDispatchedCase } from "../cases/service.js";
-import { Case } from "../models/Case.js";
-import {
   MSG,
   previewMessage,
   submittedMessage,
+  formatConfirmMessage,
 } from "./copy.js";
 import {
   confirmKeyboard,
@@ -33,6 +22,17 @@ import {
   saveSession,
 } from "./sessions.js";
 import { resolveToggle } from "../settings/service.js";
+import {
+  addLandmark,
+  applyLabel,
+  captureTruth,
+  confirmLocation,
+  needsMapPick,
+  replaceTruth,
+} from "../location/model.js";
+import { generateRef } from "../cases/ref.js";
+import { saveDispatchedCase } from "../cases/service.js";
+import { Case } from "../models/Case.js";
 
 function displayName(ctx) {
   return [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ");

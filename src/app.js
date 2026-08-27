@@ -15,8 +15,12 @@ export function createApp({ config, bot }) {
     res.json({ ok: true, service: "unified-report-penang" });
   });
 
+  const sendMessage = bot
+    ? (chatId, text) => bot.api.sendMessage(chatId, text)
+    : undefined;
+
   app.use("/api/admin", createAdminRouter(config));
-  app.use("/api/mock", createMockRouter());
+  app.use("/api/mock", createMockRouter({ sendMessage }));
 
   app.get("/ops", (_req, res) => {
     res.redirect(302, "/admin");

@@ -3,11 +3,15 @@ import { Link } from "react-router-dom";
 import { api, AGENCY_THEME } from "@/lib/api";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/misc";
+import { DonutChart } from "@/components/charts/DonutChart";
+import { AgencyFlow } from "@/components/charts/AgencyFlow";
 
 type Stats = {
   total: number;
   byStatus: Record<string, number>;
   byAgency: Record<string, number>;
+  byCategory: Record<string, number>;
+  byTicketStatus: { open: number; in_progress: number; closed: number };
   recent: Array<{
     ref: string;
     status: string;
@@ -15,6 +19,12 @@ type Stats = {
     jurisdiction?: { agencyId?: string; agencyLabel?: string; reason?: string };
     createdAt?: string;
   }>;
+};
+
+const STATUS_COLORS = {
+  open: "#40916c",
+  in_progress: "#d4a017",
+  closed: "#1c4b3a",
 };
 
 export function OverviewPage() {
@@ -28,7 +38,27 @@ export function OverviewPage() {
   }, []);
 
   if (error) return <p className="text-[var(--color-destructive)]">{error}</p>;
-  if (!stats) return <p className="text-[var(--color-muted-foreground)]">Loading…</p>;
+  if (!stats)
+    return <p className="text-[var(--color-muted-foreground)]">Loading…</p>;
+
+  const ticket = stats.byTicketStatus || {
+    open: 0,
+    in_progress: 0,
+    closed: 0,
+  };
+
+  const categorySlices = Object.entries(stats.byCategory || {}).map(
+    ([label, value]) => ({ label, value })
+  );
+  const statusSlices = [
+    { label: "Open", value: ticket.open, color: STATUS_COLORS.open },
+    {
+      label: "In progress",
+      value: ticket.in_progress,
+      color: STATUS_COLORS.in_progress,
+    },
+    { label: "Closed", value: ticket.closed, color: STATUS_COLORS.closed },
+  ];
 
   return (
     <div className="space-y-6">
@@ -38,30 +68,73 @@ export function OverviewPage() {
           Monitor unified intake and agency routing
         </p>
       </div>
+
       <div className="grid gap-4 sm:grid-cols-2 lg:grid-cols-4">
-        <Card>
-          <CardHeader>
-            <CardTitle className="text-sm font-medium text-[var(--color-muted-foreground)]">
-              Total cases
-            </CardTitle>
-          </CardHeader>
-          <CardContent>
-            <div className="text-3xl font-semibold">{stats.total}</div>
-          </CardContent>
-        </Card>
-        {Object.entries(stats.byAgency).map(([id, count]) => (
-          <Card key={id}>
+        {(
+          [
+            ["Total", stats.total],
+            ["Open", ticket.open],
+            ["In progress", ticket.in_progress],
+            ["Closed", ticket.closed],
+          ] as const
+        ).map(([label, value]) => (
+          <Card key={label}>
             <CardHeader>
               <CardTitle className="text-sm font-medium text-[var(--color-muted-foreground)]">
-                {AGENCY_THEME[id]?.short || id}
+                {label}
               </CardTitle>
             </CardHeader>
             <CardContent>
-              <div className="text-3xl font-semibold">{count}</div>
+              <div className="text-3xl font-semibold">{value}</div>
             </CardContent>
           </Card>
         ))}
       </div>
+
+      <div className="grid gap-4 lg:grid-cols-2">
+        <Card>
+          <CardHeader>
+            <CardTitle>By category</CardTitle>
+          </CardHeader>
+          <CardContent>
+            {categorySlices.length === 0 ? (
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                No classified cases yet.
+              </p>
+            ) : (
+              <DonutChart slices={categorySlices} title="By category" />
+            )}
+          </CardContent>
+        </Card>
+        <Card>
+          <CardHeader>
+            <CardTitle>By status</CardTitle>
+          </CardHeader>
+          <CardContent>
+            <DonutChart slices={statusSlices} title="By status" />
+          </CardContent>
+        </Card>
+      </div>
+
+      <Card>
+        <CardHeader>
+          <CardTitle>Agency routing flow</CardTitle>
+          <p className="text-xs font-normal text-[var(--color-muted-foreground)]">
+            Citizen reports distributed to agency mock portals
+          </p>
+        </CardHeader>
+        <CardContent>
+          <AgencyFlow byAgency={stats.byAgency || {}} />
+          <div className="mt-2 flex flex-wrap gap-3 text-xs text-[var(--color-muted-foreground)]">
+            {Object.entries(stats.byAgency || {}).map(([id, count]) => (
+              <span key={id}>
+                {AGENCY_THEME[id]?.short || id}: {count}
+              </span>
+            ))}
+          </div>
+        </CardContent>
+      </Card>
+
       <Card>
         <CardHeader>
           <CardTitle>Recent cases</CardTitle>
@@ -81,7 +154,8 @@ export function OverviewPage() {
                 <div>
                   <div className="font-medium">{c.ref}</div>
                   <div className="text-xs text-[var(--color-muted-foreground)]">
-                    {c.classification?.categoryLabel} · {c.jurisdiction?.agencyLabel}
+                    {c.classification?.categoryLabel} ·{" "}
+                    {c.jurisdiction?.agencyLabel}
                   </div>
                 </div>
                 <Badge>{c.status}</Badge>
