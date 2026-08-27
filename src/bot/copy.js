@@ -25,14 +25,34 @@ export const MSG = {
     "Ini ialah *Saluran Aduan Bersatu Pulau Pinang* (MVP Telegram).",
     "Anda boleh menghantar aduan awam tanpa memuat turun aplikasi baharu.",
     "",
-    "Sila sediakan maklumat berikut:",
-    "1. Keterangan masalah",
-    "2. Gambar bukti (jika ada)",
-    "3. Lokasi kejadian (GPS atau taip mercu tanda berdekatan)",
-    "",
-    "Lokasi digunakan untuk menentukan agensi yang bertanggungjawab.",
-    "Taip /status untuk menyemak aduan anda.",
+    "Gunakan butang menu di bawah:",
+    "• *Aduan Baharu* — buat aduan",
+    "• *Semak Aduan* — lihat status aduan anda",
+    "• *Bantuan* — cara guna bot",
   ].join("\n"),
+
+  help: [
+    "Cara guna Saluran Aduan Bersatu:",
+    "",
+    "1. Tekan *Aduan Baharu*",
+    "2. Taip keterangan masalah",
+    "3. Hantar gambar bukti (jika ada), atau *Tiada foto*",
+    "4. Kongsi lokasi GPS *atau* taip mercu tanda berdekatan",
+    "5. Sahkan ringkasan, kemudian *Hantar aduan*",
+    "",
+    "Tekan *Semak Aduan* untuk melihat status aduan terkini.",
+    "Anda juga boleh taip /status atau /status URP-XXXX.",
+  ].join("\n"),
+
+  startNew: [
+    "Baik. Sila taip keterangan masalah.",
+    "",
+    "Contoh: jalan berlubang / sampah bertimbun / paip bocor.",
+  ].join("\n"),
+
+  backToMenu: "Baik. Kembali ke menu utama.",
+
+  noCases: "Tiada aduan lagi. Tekan *Aduan Baharu* untuk menghantar aduan.",
 
   askPhoto: [
     "Adakah anda mempunyai gambar sebagai bukti?",
@@ -67,6 +87,7 @@ export const MSG = {
     "Contoh: Padang Kota · Jetty Butterworth · TM Butterworth · Nasi kandar Kepala Batas · depan 7-Eleven Komtar",
     "",
     "Anda tidak perlu membuka atau menyeret peta — taip nama tempat sahaja jika lebih mudah.",
+    "Tekan *Kembali ke menu* untuk batalkan aduan ini.",
   ].join("\n"),
 
   locatingPlace: "Sedang mencari lokasi berdasarkan mercu tanda anda…",
@@ -93,7 +114,7 @@ export const MSG = {
   ].join("\n"),
 
   cancelled:
-    "Aduan ini telah dibatalkan. Sila hantar keterangan baharu untuk memulakan aduan semula.",
+    "Aduan ini telah dibatalkan. Tekan *Aduan Baharu* bila anda mahu cuba lagi.",
 
   needText:
     "Sila taip keterangan masalah terlebih dahulu.\nContoh: jalan berlubang / sampah bertimbun / paip bocor.",
@@ -163,7 +184,7 @@ export function submittedMessage(caseDoc) {
     triage,
     "",
     "Anda akan menerima pemberitahuan di Telegram apabila status aduan dikemas kini.",
-    "Taip /status untuk menyemak semula.",
+    "Tekan *Semak Aduan* untuk menyemak semula.",
   ].join("\n");
 }
 

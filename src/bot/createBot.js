@@ -11,8 +11,10 @@ import {
   STATUS_BM,
 } from "./copy.js";
 import {
+  MENU,
   confirmKeyboard,
   locationKeyboard,
+  mainMenuKeyboard,
   photoContinueKeyboard,
   photoSkipKeyboard,
   submitKeyboard,
@@ -64,6 +66,46 @@ async function ensureBotEnabled(ctx) {
     "Saluran Telegram sedang dinyahaktifkan sementara. Sila cuba lagi kemudian."
   );
   return false;
+}
+
+async function replyMenu(ctx, text) {
+  await ctx.reply(text, { reply_markup: mainMenuKeyboard() });
+}
+
+async function askLocation(ctx) {
+  await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+}
+
+async function formatCaseLine(c) {
+  const ticket = await MockTicket.findOne({ caseRef: c.ref })
+    .sort({ createdAt: -1 })
+    .lean();
+  const statusLabel = ticket
+    ? STATUS_BM[ticket.status] || ticket.status
+    : c.status;
+  return `${c.ref} — ${c.jurisdiction?.agencyLabel || "?"} (${statusLabel})`;
+}
+
+async function replyStatusList(ctx, userId) {
+  const list = await Case.find({ "reporter.telegramUserId": userId })
+    .sort({ createdAt: -1 })
+    .limit(5);
+  if (!list.length) {
+    await replyMenu(ctx, MSG.noCases);
+    return;
+  }
+  const lines = [];
+  for (const c of list) {
+    lines.push(await formatCaseLine(c));
+  }
+  await replyMenu(ctx, lines.join("\n"));
+}
+
+async function startNewReport(ctx, session) {
+  await resetSession(session);
+  session.step = "awaiting_description";
+  await saveSession(session);
+  await ctx.reply(MSG.startNew, { reply_markup: mainMenuKeyboard() });
 }
 
 async function classifyAndPreview(session, config) {
@@ -179,22 +221,18 @@ export function createBot(config, { gateway } = {}) {
   bot.command("start", async (ctx) => {
     const session = await loadSession(ctx.from.id);
     await resetSession(session);
-    await ctx.reply(MSG.welcome);
+    await replyMenu(ctx, MSG.welcome);
+  });
+
+  bot.command("menu", async (ctx) => {
+    const session = await loadSession(ctx.from.id);
+    await resetSession(session);
+    await replyMenu(ctx, MSG.backToMenu);
   });
 
   bot.command("status", async (ctx) => {
     const arg = ctx.match?.trim();
     const userId = String(ctx.from.id);
-
-    async function formatCaseLine(c) {
-      const ticket = await MockTicket.findOne({ caseRef: c.ref })
-        .sort({ createdAt: -1 })
-        .lean();
-      const statusLabel = ticket
-        ? STATUS_BM[ticket.status] || ticket.status
-        : c.status;
-      return `${c.ref} — ${c.jurisdiction?.agencyLabel || "?"} (${statusLabel})`;
-    }
 
     if (arg) {
       const found = await Case.findOne({
@@ -202,7 +240,7 @@ export function createBot(config, { gateway } = {}) {
         "reporter.telegramUserId": userId,
       });
       if (!found) {
-        await ctx.reply("Rujukan tidak dijumpai.");
+        await replyMenu(ctx, "Rujukan tidak dijumpai.");
         return;
       }
       const ticket = await MockTicket.findOne({ caseRef: found.ref })
@@ -211,23 +249,17 @@ export function createBot(config, { gateway } = {}) {
       const statusLabel = ticket
         ? STATUS_BM[ticket.status] || ticket.status
         : found.status;
-      await ctx.reply(
+      await replyMenu(
+        ctx,
         `${found.ref}\n${found.jurisdiction?.agencyLabel || ""}\nStatus: ${statusLabel}\nTiket: ${found.dispatch?.externalRef || ticket?.externalRef || "-"}`
       );
       return;
     }
-    const list = await Case.find({ "reporter.telegramUserId": userId })
-      .sort({ createdAt: -1 })
-      .limit(5);
-    if (!list.length) {
-      await ctx.reply("Tiada aduan lagi.");
-      return;
-    }
-    const lines = [];
-    for (const c of list) {
-      lines.push(await formatCaseLine(c));
-    }
-    await ctx.reply(lines.join("\n"));
+    await replyStatusList(ctx, userId);
+  });
+
+  bot.command("help", async (ctx) => {
+    await replyMenu(ctx, MSG.help);
   });
 
   bot.callbackQuery("photo_skip", async (ctx) => {
@@ -240,7 +272,7 @@ export function createBot(config, { gateway } = {}) {
     session.step = "awaiting_location";
     await saveSession(session);
     await ctx.answerCallbackQuery();
-    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+    await askLocation(ctx);
   });
 
   bot.callbackQuery("photo_done", async (ctx) => {
@@ -257,7 +289,7 @@ export function createBot(config, { gateway } = {}) {
     session.step = "awaiting_location";
     await saveSession(session);
     await ctx.answerCallbackQuery();
-    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+    await askLocation(ctx);
   });
 
   bot.callbackQuery("loc_no", async (ctx) => {
@@ -267,7 +299,7 @@ export function createBot(config, { gateway } = {}) {
     session.step = "awaiting_location";
     await saveSession(session);
     await ctx.answerCallbackQuery();
-    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+    await askLocation(ctx);
   });
 
   bot.callbackQuery("loc_retry_text", async (ctx) => {
@@ -277,7 +309,7 @@ export function createBot(config, { gateway } = {}) {
     session.step = "awaiting_location";
     await saveSession(session);
     await ctx.answerCallbackQuery();
-    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+    await askLocation(ctx);
   });
 
   bot.callbackQuery("loc_uncertain", async (ctx) => {
@@ -315,7 +347,7 @@ export function createBot(config, { gateway } = {}) {
     session.step = "awaiting_landmark";
     await saveSession(session);
     await ctx.answerCallbackQuery();
-    await ctx.reply(MSG.askLandmark);
+    await ctx.reply(MSG.askLandmark, { reply_markup: mainMenuKeyboard() });
   });
 
   bot.callbackQuery("loc_yes", async (ctx) => {
@@ -344,7 +376,7 @@ export function createBot(config, { gateway } = {}) {
     const session = await loadSession(ctx.from.id);
     await resetSession(session);
     await ctx.answerCallbackQuery();
-    await ctx.reply(MSG.cancelled);
+    await replyMenu(ctx, MSG.cancelled);
   });
 
   bot.callbackQuery("submit_yes", async (ctx) => {
@@ -357,7 +389,7 @@ export function createBot(config, { gateway } = {}) {
     const gate = await checkSubmitAllowed(ctx.from.id);
     if (!gate.ok) {
       await ctx.answerCallbackQuery({ text: "Had dicapai" });
-      await ctx.reply(gate.message || MSG.rateLimited);
+      await replyMenu(ctx, gate.message || MSG.rateLimited);
       return;
     }
     try {
@@ -391,14 +423,15 @@ export function createBot(config, { gateway } = {}) {
       markSubmitSuccess(ctx.from.id);
       await resetSession(session);
       await ctx.answerCallbackQuery();
-      await ctx.reply(
+      await replyMenu(
+        ctx,
         submittedMessage(
           typeof caseDoc.toObject === "function" ? caseDoc.toObject() : caseDoc
         )
       );
     } catch (err) {
       await ctx.answerCallbackQuery({ text: "Gagal hantar" });
-      await ctx.reply(`Gagal hantar: ${err.message}`);
+      await replyMenu(ctx, `Gagal hantar: ${err.message}`);
     }
   });
 
@@ -408,9 +441,11 @@ export function createBot(config, { gateway } = {}) {
       if (hasPhotos(session)) {
         session.step = "awaiting_description";
         await saveSession(session);
-        await ctx.reply(MSG.askDescriptionAfterPhoto);
+        await ctx.reply(MSG.askDescriptionAfterPhoto, {
+          reply_markup: mainMenuKeyboard(),
+        });
       } else {
-        await ctx.reply(MSG.needText);
+        await replyMenu(ctx, MSG.needText);
       }
       return;
     }
@@ -432,7 +467,9 @@ export function createBot(config, { gateway } = {}) {
       session.draft.askedPhoto = true;
       session.step = "awaiting_description";
       await saveSession(session);
-      await ctx.reply(MSG.askDescriptionAfterPhoto);
+      await ctx.reply(MSG.askDescriptionAfterPhoto, {
+        reply_markup: mainMenuKeyboard(),
+      });
       return;
     }
 
@@ -441,7 +478,9 @@ export function createBot(config, { gateway } = {}) {
       session.draft.askedPhoto = true;
       session.step = "awaiting_description";
       await saveSession(session);
-      await ctx.reply(MSG.askDescriptionAfterPhoto);
+      await ctx.reply(MSG.askDescriptionAfterPhoto, {
+        reply_markup: mainMenuKeyboard(),
+      });
       return;
     }
 
@@ -471,7 +510,7 @@ export function createBot(config, { gateway } = {}) {
         session.step = "awaiting_location";
         await saveSession(session);
         await ctx.reply(MSG.photoLimitReached(MAX_PHOTOS));
-        await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+        await askLocation(ctx);
         return;
       }
       await ctx.reply(MSG.photoReceived(n, MAX_PHOTOS), {
@@ -501,6 +540,25 @@ export function createBot(config, { gateway } = {}) {
     const text = ctx.message.text.trim();
     if (isDuplicateBurst(ctx.from.id, text)) return;
 
+    // Main menu actions (always handled, even mid-flow)
+    if (text === MENU.NEW) {
+      await startNewReport(ctx, session);
+      return;
+    }
+    if (text === MENU.STATUS) {
+      await replyStatusList(ctx, String(ctx.from.id));
+      return;
+    }
+    if (text === MENU.HELP) {
+      await replyMenu(ctx, MSG.help);
+      return;
+    }
+    if (text === MENU.BACK) {
+      await resetSession(session);
+      await replyMenu(ctx, MSG.backToMenu);
+      return;
+    }
+
     if (session.step === "awaiting_landmark") {
       session.draft.location = addLandmark(session.draft.location, text);
       session.draft.location = confirmLocation(
@@ -519,18 +577,28 @@ export function createBot(config, { gateway } = {}) {
       return;
     }
 
-    if (session.step === "awaiting_description") {
+    if (session.step === "awaiting_description" || session.step === "idle") {
+      // Idle free-text still starts a report (shortcut)
       session.draft.text = text;
-      session.step = "awaiting_photo";
-      session.draft.askedPhoto = true;
-      await saveSession(session);
-      if (hasPhotos(session)) {
-        await ctx.reply(MSG.photoReceived(session.draft.photoFileIds.length, MAX_PHOTOS), {
-          reply_markup: photoContinueKeyboard(true),
-        });
-      } else {
+      if (!session.draft.askedPhoto && !hasPhotos(session)) {
+        session.draft.askedPhoto = true;
+        session.step = "awaiting_photo";
+        await saveSession(session);
         await ctx.reply(MSG.askPhoto, { reply_markup: photoSkipKeyboard() });
+        return;
       }
+      if (hasPhotos(session)) {
+        session.step = "awaiting_photo";
+        await saveSession(session);
+        await ctx.reply(
+          MSG.photoReceived(session.draft.photoFileIds.length, MAX_PHOTOS),
+          { reply_markup: photoContinueKeyboard(true) }
+        );
+        return;
+      }
+      session.step = "awaiting_location";
+      await saveSession(session);
+      await askLocation(ctx);
       return;
     }
 
@@ -543,13 +611,22 @@ export function createBot(config, { gateway } = {}) {
         session.draft.text = text;
         session.step = "awaiting_location";
         await saveSession(session);
-        await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+        await askLocation(ctx);
         return;
       }
       await resolveTextPlace(ctx, session, config, text);
       return;
     }
 
+    if (session.step === "awaiting_photo") {
+      // User typed instead of photo — treat as reminder
+      await ctx.reply(MSG.askPhoto, {
+        reply_markup: photoContinueKeyboard(hasPhotos(session)),
+      });
+      return;
+    }
+
+    // Fallback: treat as new description
     session.draft.text = text;
     if (!session.draft.askedPhoto && !hasPhotos(session)) {
       session.draft.askedPhoto = true;
@@ -558,15 +635,9 @@ export function createBot(config, { gateway } = {}) {
       await ctx.reply(MSG.askPhoto, { reply_markup: photoSkipKeyboard() });
       return;
     }
-    if (session.step === "awaiting_photo") {
-      await ctx.reply(MSG.askPhoto, {
-        reply_markup: photoContinueKeyboard(hasPhotos(session)),
-      });
-      return;
-    }
     session.step = "awaiting_location";
     await saveSession(session);
-    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+    await askLocation(ctx);
   });
 
   return bot;

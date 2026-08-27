@@ -28,6 +28,7 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Admin UI: Stat Cards, Cases table+pagination, Overview side-by-side, photo carousel, sonner/Alert
 - [x] Bot multi-photo: max 5, Teruskan / album debounce
 - [x] Mock portals hub: bento picker with official agency logos (`/admin/mock-portals`)
+- [x] Bot main menu: Aduan Baharu / Semak Aduan / Bantuan; GPS keyboard only on location step
 
 ## How to run
 

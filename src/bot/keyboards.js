@@ -1,8 +1,30 @@
 import { InlineKeyboard, Keyboard } from "grammy";
 
+/** Persistent reply menu when idle / not asking for GPS. */
+export const MENU = {
+  NEW: "Aduan Baharu",
+  STATUS: "Semak Aduan",
+  HELP: "Bantuan",
+  BACK: "Kembali ke menu",
+  GPS: "Kongsi lokasi GPS",
+};
+
+export function mainMenuKeyboard() {
+  return new Keyboard()
+    .text(MENU.NEW)
+    .text(MENU.STATUS)
+    .row()
+    .text(MENU.HELP)
+    .resized()
+    .persistent();
+}
+
+/** Only shown while collecting / confirming location. */
 export function locationKeyboard() {
   return new Keyboard()
-    .requestLocation("Kongsi lokasi GPS")
+    .requestLocation(MENU.GPS)
+    .row()
+    .text(MENU.BACK)
     .resized()
     .oneTime();
 }
