@@ -7,6 +7,7 @@ import {
   previewMessage,
   submittedMessage,
   formatConfirmMessage,
+  STATUS_BM,
 } from "./copy.js";
 import {
   confirmKeyboard,
@@ -33,6 +34,7 @@ import {
 import { generateRef } from "../cases/ref.js";
 import { saveDispatchedCase } from "../cases/service.js";
 import { Case } from "../models/Case.js";
+import { MockTicket } from "../models/MockTicket.js";
 
 function displayName(ctx) {
   return [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ");
@@ -120,6 +122,17 @@ export function createBot(config, { gateway } = {}) {
   bot.command("status", async (ctx) => {
     const arg = ctx.match?.trim();
     const userId = String(ctx.from.id);
+
+    async function formatCaseLine(c) {
+      const ticket = await MockTicket.findOne({ caseRef: c.ref })
+        .sort({ createdAt: -1 })
+        .lean();
+      const statusLabel = ticket
+        ? STATUS_BM[ticket.status] || ticket.status
+        : c.status;
+      return `${c.ref} — ${c.jurisdiction?.agencyLabel || "?"} (${statusLabel})`;
+    }
+
     if (arg) {
       const found = await Case.findOne({
         ref: arg.toUpperCase(),
@@ -129,8 +142,14 @@ export function createBot(config, { gateway } = {}) {
         await ctx.reply("Rujukan tidak dijumpai.");
         return;
       }
+      const ticket = await MockTicket.findOne({ caseRef: found.ref })
+        .sort({ createdAt: -1 })
+        .lean();
+      const statusLabel = ticket
+        ? STATUS_BM[ticket.status] || ticket.status
+        : found.status;
       await ctx.reply(
-        `${found.ref}\n${found.jurisdiction?.agencyLabel || ""}\nStatus: ${found.status}\nTiket: ${found.dispatch?.externalRef || "-"}`
+        `${found.ref}\n${found.jurisdiction?.agencyLabel || ""}\nStatus: ${statusLabel}\nTiket: ${found.dispatch?.externalRef || ticket?.externalRef || "-"}`
       );
       return;
     }
@@ -141,9 +160,10 @@ export function createBot(config, { gateway } = {}) {
       await ctx.reply("Tiada aduan lagi.");
       return;
     }
-    const lines = list.map(
-      (c) => `${c.ref} — ${c.jurisdiction?.agencyLabel || "?"} (${c.status})`
-    );
+    const lines = [];
+    for (const c of list) {
+      lines.push(await formatCaseLine(c));
+    }
     await ctx.reply(lines.join("\n"));
   });
 

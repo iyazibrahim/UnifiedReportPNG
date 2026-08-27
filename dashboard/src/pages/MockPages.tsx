@@ -6,6 +6,7 @@ import { Badge } from "@/components/ui/misc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 
 type Ticket = {
+  _id?: string;
   externalRef: string;
   caseRef?: string;
   status: string;
@@ -119,7 +120,7 @@ export function MockInboxPage() {
         ) : (
           items.map((t) => (
             <button
-              key={t.externalRef}
+              key={t._id || `${t.externalRef}-${t.caseRef}`}
               type="button"
               className="w-full text-left"
               onClick={() => navigate(`/mock/${agencyId}/${t.externalRef}`)}

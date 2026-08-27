@@ -5,7 +5,7 @@ const STATUS = ["received", "in_progress", "resolved", "rejected"];
 const mockTicketSchema = new mongoose.Schema(
   {
     adapterId: { type: String, index: true },
-    externalRef: { type: String, index: true },
+    externalRef: { type: String, unique: true },
     caseRef: { type: String, index: true },
     payload: mongoose.Schema.Types.Mixed,
     status: {

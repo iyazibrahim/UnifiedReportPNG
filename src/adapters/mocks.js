@@ -8,15 +8,20 @@ const PREFIX = {
   epintas: "EPINTAS",
 };
 
+/** Stable unique mock ticket id — never recycle PEARL-0001 after restarts. */
+export function buildExternalRef(agencyId, caseRef) {
+  const prefix = PREFIX[agencyId] || "TICKET";
+  const raw = String(caseRef || "").trim();
+  const suffix = raw.replace(/^PG-/i, "") || `${Date.now().toString(36)}`;
+  return `${prefix}-${suffix}`;
+}
+
 export function createMemoryAdapters(store) {
-  const counters = {};
   const adapters = {};
-  for (const [agencyId, prefix] of Object.entries(PREFIX)) {
-    counters[agencyId] = 0;
+  for (const agencyId of Object.keys(PREFIX)) {
     adapters[agencyId] = {
       async submit(caseDoc) {
-        counters[agencyId] += 1;
-        const externalRef = `${prefix}-${String(counters[agencyId]).padStart(4, "0")}`;
+        const externalRef = buildExternalRef(agencyId, caseDoc.ref);
         const payload = toDispatchPayload(caseDoc);
         const ticket = {
           adapterId: agencyId,
@@ -31,3 +36,5 @@ export function createMemoryAdapters(store) {
   }
   return adapters;
 }
+
+export { PREFIX };

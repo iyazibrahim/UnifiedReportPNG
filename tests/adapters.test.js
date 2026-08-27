@@ -41,10 +41,50 @@ describe("agency gateway", () => {
     };
 
     const result = await gateway.dispatch(caseDoc);
-    assert.match(result.externalRef, /^PEARL-/);
+    assert.equal(result.externalRef, "PEARL-20260826-A3K9");
     assert.equal(store.length, 1);
     assert.equal(store[0].payload.location.lat, 5.4141);
     assert.equal(store[0].payload.location.display_name, "George Town");
+  });
+
+  it("does not recycle ticket numbers across different cases", async () => {
+    const store = [];
+    const gateway = createGateway(createMemoryAdapters(store));
+    const base = {
+      channel: "telegram",
+      reporter: { telegramUserId: "1", displayName: "Ali" },
+      intake: { text: "sampah", photoFileIds: [], language: "ms" },
+      location: {
+        lat: 5.4141,
+        lng: 100.3288,
+        accuracy_m: 10,
+        source: "telegram_picked",
+        confirmed: true,
+        confirmed_at: "2026-08-26T00:00:00Z",
+        display_name: "George Town",
+        road: "Jalan Penang",
+        landmark: null,
+        address_override: null,
+      },
+      classification: {
+        categoryId: "kebersihan",
+        categoryLabel: "Kebersihan",
+        confidence: 0.9,
+        method: "rules",
+      },
+      jurisdiction: {
+        agencyId: "pearl_mbpp",
+        agencyLabel: "Pearl eAduan (MBPP)",
+        reason: "Pulau + kebersihan",
+        confidence: "high",
+        needsTriage: false,
+      },
+    };
+    const a = await gateway.dispatch({ ...base, ref: "PG-20260827-AAAA" });
+    const b = await gateway.dispatch({ ...base, ref: "PG-20260827-BBBB" });
+    assert.equal(a.externalRef, "PEARL-20260827-AAAA");
+    assert.equal(b.externalRef, "PEARL-20260827-BBBB");
+    assert.notEqual(a.externalRef, b.externalRef);
   });
 
   it("refuses dispatch when location is not confirmed", async () => {

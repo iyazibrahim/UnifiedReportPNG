@@ -86,18 +86,20 @@ export function createMockRouter(opts = {}) {
     "/:agencyId/tickets/:externalRef",
     optionalPinGuard,
     async (req, res) => {
-      const ticket = await MockTicket.findOne({
-        adapterId: req.agencyId,
-        externalRef: String(req.params.externalRef).toUpperCase(),
-      }).lean();
-      if (!ticket) {
-        const loose = await MockTicket.findOne({
+      const ticket =
+        (await MockTicket.findOne({
+          adapterId: req.agencyId,
+          externalRef: String(req.params.externalRef).toUpperCase(),
+        })
+          .sort({ createdAt: -1 })
+          .lean()) ||
+        (await MockTicket.findOne({
           adapterId: req.agencyId,
           externalRef: String(req.params.externalRef),
-        }).lean();
-        if (!loose) return res.status(404).json({ error: "Not found" });
-        return res.json({ agency: AGENCIES[req.agencyId], ticket: loose });
-      }
+        })
+          .sort({ createdAt: -1 })
+          .lean());
+      if (!ticket) return res.status(404).json({ error: "Not found" });
       res.json({ agency: AGENCIES[req.agencyId], ticket });
     }
   );

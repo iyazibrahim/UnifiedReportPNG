@@ -114,12 +114,18 @@ export function createAdminRouter(config) {
       ref: String(req.params.ref).toUpperCase(),
     }).lean();
     if (!caseDoc) return res.status(404).json({ error: "Not found" });
-    const ticket = caseDoc.dispatch?.externalRef
-      ? await MockTicket.findOne({
-          externalRef: caseDoc.dispatch.externalRef,
-        }).lean()
-      : null;
-    res.json({ case: caseDoc, ticket });
+    const ticket = await MockTicket.findOne({ caseRef: caseDoc.ref }).lean();
+    // Fallback for older tickets that may not have caseRef indexed the same way
+    const linked =
+      ticket ||
+      (caseDoc.dispatch?.externalRef
+        ? await MockTicket.findOne({
+            externalRef: caseDoc.dispatch.externalRef,
+          })
+            .sort({ createdAt: -1 })
+            .lean()
+        : null);
+    res.json({ case: caseDoc, ticket: linked });
   });
 
   router.get("/cases/:ref/photos/:fileId", async (req, res) => {
