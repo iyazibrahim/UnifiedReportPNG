@@ -43,34 +43,34 @@ export const AGENCY_THEME: Record<
   { accent: string; label: string; short: string; logo: string }
 > = {
   pearl_mbpp: {
-    accent: "#1c4b3a",
+    accent: "#f97316",
     label: "Pearl eAduan (MBPP)",
     short: "Pearl",
-    logo: "/agencies/pearl_mbpp.svg",
+    logo: "/agencies/pearl_mbpp.png",
   },
   aspire_mbsp: {
     accent: "#1e3a8a",
     label: "Aspire eAduan (MBSP)",
     short: "Aspire",
-    logo: "/agencies/aspire_mbsp.svg",
+    logo: "/agencies/aspire_mbsp.png",
   },
   myjalan: {
     accent: "#c2410c",
     label: "MyJalan (JKR / KKR)",
     short: "MyJalan",
-    logo: "/agencies/myjalan.svg",
+    logo: "/agencies/myjalan.png",
   },
   pbapp: {
     accent: "#0e7490",
     label: "PBAPP (Bekalan Air)",
     short: "PBAPP",
-    logo: "/agencies/pbapp.svg",
+    logo: "/agencies/pbapp.png",
   },
   epintas: {
     accent: "#a16207",
     label: "ePINTAS (PSUK)",
     short: "ePINTAS",
-    logo: "/agencies/epintas.svg",
+    logo: "/agencies/epintas.png",
   },
 };
 

@@ -1,8 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="ePINTAS">
-  <rect width="120" height="120" rx="24" fill="#a16207"/>
-  <rect x="34" y="32" width="52" height="40" rx="6" fill="none" stroke="#fef3c7" stroke-width="4"/>
-  <path d="M44 52h32M44 62h20" stroke="#fde68a" stroke-width="3" stroke-linecap="round"/>
-  <circle cx="78" cy="78" r="14" fill="#fbbf24"/>
-  <path d="M78 72v8M74 76h8" stroke="#78350f" stroke-width="2.5" stroke-linecap="round"/>
-  <text x="60" y="108" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="12" font-weight="700">ePINTAS</text>
-</svg>

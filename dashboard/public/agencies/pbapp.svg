@@ -1,6 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="PBAPP">
-  <rect width="120" height="120" rx="24" fill="#0e7490"/>
-  <path d="M40 38c12 0 20 10 20 22s-8 22-20 22c8-8 8-36 0-44z" fill="#a5f3fc"/>
-  <path d="M60 42c10 4 16 14 16 24s-6 18-16 22c6-8 6-38 0-46z" fill="#cffafe" opacity="0.9"/>
-  <text x="60" y="100" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="14" font-weight="700">PBAPP</text>
-</svg>

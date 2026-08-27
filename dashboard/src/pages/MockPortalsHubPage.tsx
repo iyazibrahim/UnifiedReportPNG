@@ -40,9 +40,7 @@ export function MockPortalsHubPage() {
       <div>
         <h1 className="text-2xl font-semibold tracking-tight">Mock portals</h1>
         <p className="mt-1 max-w-2xl text-sm text-[var(--color-muted-foreground)]">
-          Pilih portal agensi untuk melihat inbox tiket simulasi. Ganti fail
-          logo di <code className="text-xs">/agencies/*.svg</code> dengan aset
-          rasmi bila tersedia.
+          Pilih portal agensi untuk melihat inbox tiket simulasi.
         </p>
       </div>
 
@@ -74,8 +72,10 @@ export function MockPortalsHubPage() {
                   src={theme.logo}
                   alt={`${theme.short} logo`}
                   className={cn(
-                    "rounded-xl shadow-sm ring-1 ring-black/5",
-                    p.span.includes("row-span-2") ? "size-16" : "size-12"
+                    "object-contain bg-white p-1 shadow-sm ring-1 ring-black/5",
+                    p.span.includes("row-span-2")
+                      ? "size-16 rounded-xl"
+                      : "size-12 rounded-lg"
                   )}
                 />
                 <span

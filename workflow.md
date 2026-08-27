@@ -27,7 +27,7 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Abuse guards: rate limits, cooldown, burst soft-drop (`abuseGuardsEnabled`)
 - [x] Admin UI: Stat Cards, Cases table+pagination, Overview side-by-side, photo carousel, sonner/Alert
 - [x] Bot multi-photo: max 5, Teruskan / album debounce
-- [x] Mock portals hub: bento picker with agency logos (`/admin/mock-portals`)
+- [x] Mock portals hub: bento picker with official agency logos (`/admin/mock-portals`)
 
 ## How to run
 

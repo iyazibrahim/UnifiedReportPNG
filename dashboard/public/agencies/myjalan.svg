@@ -1,7 +1,0 @@
-<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="MyJalan">
-  <rect width="120" height="120" rx="24" fill="#c2410c"/>
-  <path d="M28 70 H92" stroke="#ffedd5" stroke-width="8" stroke-linecap="round"/>
-  <path d="M28 70 H92" stroke="#fdba74" stroke-width="2" stroke-dasharray="8 10" stroke-linecap="round"/>
-  <path d="M40 48 L52 70 L64 48 L76 70 L88 48" fill="none" stroke="#fff7ed" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
-  <text x="60" y="98" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">MyJalan</text>
-</svg>
