@@ -6,6 +6,7 @@ import { OverviewPage } from "@/pages/CasesPage";
 import { CasesPage } from "@/pages/CasesListPage";
 import { CaseDetailPage } from "@/pages/CaseDetailPage";
 import { SettingsPage } from "@/pages/SettingsPage";
+import { MockPortalsHubPage } from "@/pages/MockPortalsHubPage";
 import { MockInboxPage, MockTicketPage } from "@/pages/MockPages";
 import { getToken } from "@/lib/api";
 
@@ -31,7 +32,9 @@ export default function App() {
         <Route path="cases" element={<CasesPage />} />
         <Route path="cases/:ref" element={<CaseDetailPage />} />
         <Route path="settings" element={<SettingsPage />} />
+        <Route path="mock-portals" element={<MockPortalsHubPage />} />
       </Route>
+      <Route path="/mock" element={<Navigate to="/admin/mock-portals" replace />} />
       <Route path="/mock/:agencyId" element={<MockInboxPage />} />
       <Route
         path="/mock/:agencyId/:externalRef"

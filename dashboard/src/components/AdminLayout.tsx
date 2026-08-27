@@ -15,6 +15,7 @@ const links = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
   { to: "/admin/cases", label: "Cases", icon: FileText },
   { to: "/admin/settings", label: "Settings", icon: Settings },
+  { to: "/admin/mock-portals", label: "Mock portals", icon: ExternalLink },
 ];
 
 export function AdminLayout() {
@@ -36,7 +37,7 @@ export function AdminLayout() {
               end={end}
               className={({ isActive }) =>
                 cn(
-                  "flex items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap",
+                  "flex min-h-11 items-center gap-2 rounded-md px-3 py-2 text-sm whitespace-nowrap",
                   isActive ? "bg-white/15" : "hover:bg-white/10"
                 )
               }
@@ -45,13 +46,6 @@ export function AdminLayout() {
               {label}
             </NavLink>
           ))}
-          <a
-            href="/mock/pearl_mbpp"
-            className="flex items-center gap-2 rounded-md px-3 py-2 text-sm hover:bg-white/10"
-          >
-            <ExternalLink className="h-4 w-4" />
-            Mock portals
-          </a>
         </nav>
         <div className="hidden md:block p-3 mt-auto">
           <Button

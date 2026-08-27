@@ -1,0 +1,7 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 120 120" role="img" aria-label="Aspire eAduan MBSP">
+  <rect width="120" height="120" rx="24" fill="#1e3a8a"/>
+  <path d="M60 26 L86 72 H34 Z" fill="none" stroke="#dbeafe" stroke-width="5" stroke-linejoin="round"/>
+  <circle cx="60" cy="58" r="6" fill="#93c5fd"/>
+  <text x="60" y="92" text-anchor="middle" fill="#ffffff" font-family="Segoe UI, Arial, sans-serif" font-size="13" font-weight="700">ASPIRE</text>
+  <text x="60" y="108" text-anchor="middle" fill="#bfdbfe" font-family="Segoe UI, Arial, sans-serif" font-size="9" font-weight="600">MBSP</text>
+</svg>
