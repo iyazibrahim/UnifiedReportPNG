@@ -17,6 +17,7 @@ RUN npm ci --omit=dev
 
 COPY src ./src
 COPY data ./data
+COPY scripts ./scripts
 COPY --from=dashboard-build /app/dashboard/dist ./dashboard/dist
 
 EXPOSE 3500

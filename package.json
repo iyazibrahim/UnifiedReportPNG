@@ -8,7 +8,9 @@
     "dev": "node --watch src/index.js",
     "dev:dashboard": "npm --prefix dashboard run dev",
     "build:dashboard": "npm --prefix dashboard run build",
-    "test": "node --test tests/*.test.js"
+    "test": "node --test tests/*.test.js",
+    "fix:tickets": "node scripts/fix-duplicate-tickets.js",
+    "fix:tickets:dry": "node scripts/fix-duplicate-tickets.js --dry-run"
   },
   "engines": {
     "node": ">=20"

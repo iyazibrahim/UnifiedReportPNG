@@ -20,6 +20,7 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Overview: KPI cards, category/status donuts, animated agency flow; stats API extended
 - [x] Photo without caption: keep image, ask plain-text description (`awaiting_description`) instead of forcing caption
 - [x] Fix mock ticket ID reuse (PEARL-0001 after restart) that made new cases inherit old "Selesai" status
+- [x] Cleanup script `scripts/fix-duplicate-tickets.js` to relink old shared PEARL-0001 tickets
 
 ## How to run
 
