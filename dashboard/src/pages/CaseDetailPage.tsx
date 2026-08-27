@@ -1,10 +1,21 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 import { ArrowLeft } from "lucide-react";
+import { toast } from "sonner";
 import { api, getToken, AGENCY_THEME, STATUS_BM } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/misc";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Carousel,
+  CarouselContent,
+  CarouselItem,
+  CarouselNext,
+  CarouselPrevious,
+  CarouselDots,
+} from "@/components/ui/carousel";
 import { cn } from "@/lib/utils";
 
 type Detail = {
@@ -56,7 +67,10 @@ export function CaseDetailPage() {
     if (!ref) return;
     api<Detail>(`/api/admin/cases/${ref}`)
       .then(setData)
-      .catch((e) => setError(e.message));
+      .catch((e) => {
+        setError(e.message);
+        toast.error(e.message);
+      });
   }, [ref]);
 
   const photoIds = useMemo(
@@ -64,8 +78,22 @@ export function CaseDetailPage() {
     [data]
   );
 
-  if (error) return <p className="text-[var(--color-destructive)]">{error}</p>;
-  if (!data) return <p>Loading…</p>;
+  if (error) {
+    return (
+      <Alert variant="destructive">
+        <AlertTitle>Case not available</AlertTitle>
+        <AlertDescription>{error}</AlertDescription>
+      </Alert>
+    );
+  }
+  if (!data) {
+    return (
+      <div className="flex flex-col gap-4">
+        <Skeleton className="h-8 w-40" />
+        <Skeleton className="h-48 w-full" />
+      </div>
+    );
+  }
 
   const c = data.case;
   const loc = (c.location || {}) as {
@@ -132,25 +160,35 @@ export function CaseDetailPage() {
             {photoIds.length > 0 ? (
               <div>
                 <p className="mb-2 font-medium">Photos ({photoIds.length})</p>
-                <div className="flex flex-wrap gap-2">
-                  {photoIds.map((id) => {
-                    const src = photoUrl(c.ref, id);
-                    return (
-                      <button
-                        key={id}
-                        type="button"
-                        className="h-20 w-20 overflow-hidden rounded-md border border-[var(--color-border)]"
-                        onClick={() => setLightbox(src)}
-                      >
-                        <img
-                          src={src}
-                          alt="Evidence"
-                          className="h-full w-full object-cover"
-                        />
-                      </button>
-                    );
-                  })}
-                </div>
+                <Carousel className="w-full max-w-md">
+                  <CarouselContent>
+                    {photoIds.map((id, i) => {
+                      const src = photoUrl(c.ref, id);
+                      return (
+                        <CarouselItem key={id}>
+                          <button
+                            type="button"
+                            className="block w-full overflow-hidden rounded-md border border-[var(--color-border)]"
+                            onClick={() => setLightbox(src)}
+                          >
+                            <img
+                              src={src}
+                              alt={`Evidence photo ${i + 1} of ${photoIds.length}`}
+                              className="aspect-video w-full object-cover"
+                            />
+                          </button>
+                        </CarouselItem>
+                      );
+                    })}
+                  </CarouselContent>
+                  {photoIds.length > 1 ? (
+                    <>
+                      <CarouselPrevious />
+                      <CarouselNext />
+                    </>
+                  ) : null}
+                  <CarouselDots />
+                </Carousel>
               </div>
             ) : (
               <p className="text-[var(--color-muted-foreground)]">No photos</p>

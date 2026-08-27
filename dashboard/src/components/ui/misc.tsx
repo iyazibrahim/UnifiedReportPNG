@@ -1,20 +1,8 @@
 import * as React from "react";
+export { Input } from "@/components/ui/input";
+export { Badge } from "@/components/ui/badge";
+export { Separator } from "@/components/ui/separator";
 import { cn } from "@/lib/utils";
-
-export const Input = React.forwardRef<
-  HTMLInputElement,
-  React.InputHTMLAttributes<HTMLInputElement>
->(({ className, ...props }, ref) => (
-  <input
-    ref={ref}
-    className={cn(
-      "flex h-9 w-full rounded-md border border-[var(--color-input)] bg-white px-3 py-1 text-sm shadow-sm placeholder:text-[var(--color-muted-foreground)] focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
-      className
-    )}
-    {...props}
-  />
-));
-Input.displayName = "Input";
 
 export function Label({
   className,
@@ -23,21 +11,6 @@ export function Label({
   return (
     <label
       className={cn("text-sm font-medium leading-none", className)}
-      {...props}
-    />
-  );
-}
-
-export function Badge({
-  className,
-  ...props
-}: React.HTMLAttributes<HTMLSpanElement>) {
-  return (
-    <span
-      className={cn(
-        "inline-flex items-center rounded-md border border-[var(--color-border)] bg-[var(--color-secondary)] px-2 py-0.5 text-xs font-medium",
-        className
-      )}
       {...props}
     />
   );
@@ -73,13 +46,5 @@ export function Switch({
         )}
       />
     </button>
-  );
-}
-
-export function Separator({ className }: { className?: string }) {
-  return (
-    <div
-      className={cn("h-px w-full bg-[var(--color-border)]", className)}
-    />
   );
 }

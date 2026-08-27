@@ -25,6 +25,8 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Landmark text → LLM normalize → Nominatim pin + Ya / Cuba semula / Tidak pasti (triage)
 - [x] Case detail labels: Pin GPS · Disahkan oleh pelapor · Nama jalan laporan
 - [x] Abuse guards: rate limits, cooldown, burst soft-drop (`abuseGuardsEnabled`)
+- [x] Admin UI: Stat Cards, Cases table+pagination, Overview side-by-side, photo carousel, sonner/Alert
+- [x] Bot multi-photo: max 5, Teruskan / album debounce
 
 ## How to run
 

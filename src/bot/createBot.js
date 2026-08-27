@@ -13,6 +13,7 @@ import {
 import {
   confirmKeyboard,
   locationKeyboard,
+  photoContinueKeyboard,
   photoSkipKeyboard,
   submitKeyboard,
   textPlaceConfirmKeyboard,
@@ -43,6 +44,9 @@ import {
   isDuplicateBurst,
   markSubmitSuccess,
 } from "./abuse.js";
+
+const MAX_PHOTOS = 5;
+const albumAckTimers = new Map(); // media_group_id -> timeout
 
 function displayName(ctx) {
   return [ctx.from?.first_name, ctx.from?.last_name].filter(Boolean).join(" ");
@@ -239,6 +243,23 @@ export function createBot(config, { gateway } = {}) {
     await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
   });
 
+  bot.callbackQuery("photo_done", async (ctx) => {
+    const session = await loadSession(ctx.from.id);
+    if (!hasIntakeText(session)) {
+      await ctx.answerCallbackQuery({ text: "Hantar keterangan dulu" });
+      return;
+    }
+    if (!hasPhotos(session)) {
+      await ctx.answerCallbackQuery({ text: "Tiada gambar lagi" });
+      return;
+    }
+    session.draft.askedPhoto = true;
+    session.step = "awaiting_location";
+    await saveSession(session);
+    await ctx.answerCallbackQuery();
+    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+  });
+
   bot.callbackQuery("loc_no", async (ctx) => {
     const session = await loadSession(ctx.from.id);
     session.draft.location = null;
@@ -399,14 +420,15 @@ export function createBot(config, { gateway } = {}) {
   bot.on("message:photo", async (ctx) => {
     const session = await loadSession(ctx.from.id);
     const fileId = largestPhotoId(ctx);
-    if (fileId) session.draft.photoFileIds.push(fileId);
     const caption = ctx.message.caption?.trim();
     if (caption) {
       if (isDuplicateBurst(ctx.from.id, caption)) return;
       session.draft.text = caption;
     }
 
-    if (!hasIntakeText(session)) {
+    // First message is photo without prior text → ask description after storing photo
+    if (!hasIntakeText(session) && !hasPhotos(session) && fileId) {
+      session.draft.photoFileIds.push(fileId);
       session.draft.askedPhoto = true;
       session.step = "awaiting_description";
       await saveSession(session);
@@ -414,10 +436,63 @@ export function createBot(config, { gateway } = {}) {
       return;
     }
 
+    if (!hasIntakeText(session)) {
+      if (fileId) session.draft.photoFileIds.push(fileId);
+      session.draft.askedPhoto = true;
+      session.step = "awaiting_description";
+      await saveSession(session);
+      await ctx.reply(MSG.askDescriptionAfterPhoto);
+      return;
+    }
+
+    // Collecting photos (stay until Teruskan / max)
+    const count = session.draft.photoFileIds?.length || 0;
+    if (count >= MAX_PHOTOS) {
+      await ctx.reply(MSG.photoTooMany(MAX_PHOTOS), {
+        reply_markup: photoContinueKeyboard(true),
+      });
+      return;
+    }
+
+    if (fileId && !session.draft.photoFileIds.includes(fileId)) {
+      session.draft.photoFileIds.push(fileId);
+    }
     session.draft.askedPhoto = true;
-    session.step = "awaiting_location";
+    session.step = "awaiting_photo";
     await saveSession(session);
-    await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+
+    const n = session.draft.photoFileIds.length;
+    const mediaGroupId = ctx.message.media_group_id
+      ? String(ctx.message.media_group_id)
+      : null;
+
+    const replyCollecting = async () => {
+      if (n >= MAX_PHOTOS) {
+        session.step = "awaiting_location";
+        await saveSession(session);
+        await ctx.reply(MSG.photoLimitReached(MAX_PHOTOS));
+        await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+        return;
+      }
+      await ctx.reply(MSG.photoReceived(n, MAX_PHOTOS), {
+        reply_markup: photoContinueKeyboard(true),
+      });
+    };
+
+    if (mediaGroupId) {
+      const key = `${ctx.from.id}:${mediaGroupId}`;
+      clearTimeout(albumAckTimers.get(key));
+      albumAckTimers.set(
+        key,
+        setTimeout(() => {
+          albumAckTimers.delete(key);
+          replyCollecting().catch(() => {});
+        }, 1500)
+      );
+      return;
+    }
+
+    await replyCollecting();
   });
 
   bot.on("message:text", async (ctx) => {
@@ -446,9 +521,16 @@ export function createBot(config, { gateway } = {}) {
 
     if (session.step === "awaiting_description") {
       session.draft.text = text;
-      session.step = "awaiting_location";
+      session.step = "awaiting_photo";
+      session.draft.askedPhoto = true;
       await saveSession(session);
-      await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
+      if (hasPhotos(session)) {
+        await ctx.reply(MSG.photoReceived(session.draft.photoFileIds.length, MAX_PHOTOS), {
+          reply_markup: photoContinueKeyboard(true),
+        });
+      } else {
+        await ctx.reply(MSG.askPhoto, { reply_markup: photoSkipKeyboard() });
+      }
       return;
     }
 
@@ -474,6 +556,12 @@ export function createBot(config, { gateway } = {}) {
       session.step = "awaiting_photo";
       await saveSession(session);
       await ctx.reply(MSG.askPhoto, { reply_markup: photoSkipKeyboard() });
+      return;
+    }
+    if (session.step === "awaiting_photo") {
+      await ctx.reply(MSG.askPhoto, {
+        reply_markup: photoContinueKeyboard(hasPhotos(session)),
+      });
       return;
     }
     session.step = "awaiting_location";

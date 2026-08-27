@@ -1,9 +1,34 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
+import { toast } from "sonner";
 import { api, AGENCY_THEME } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Input, Badge } from "@/components/ui/misc";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Input } from "@/components/ui/input";
+import { Badge } from "@/components/ui/badge";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
+import { Skeleton } from "@/components/ui/skeleton";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  Pagination,
+  PaginationContent,
+  PaginationItem,
+  PaginationNext,
+  PaginationPrevious,
+} from "@/components/ui/pagination";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 type CaseRow = {
   ref: string;
@@ -14,97 +39,181 @@ type CaseRow = {
   createdAt?: string;
 };
 
+const PAGE_SIZE = 20;
+
 export function CasesPage() {
   const [q, setQ] = useState("");
-  const [agency, setAgency] = useState("");
+  const [agency, setAgency] = useState("all");
+  const [page, setPage] = useState(1);
   const [items, setItems] = useState<CaseRow[]>([]);
   const [total, setTotal] = useState(0);
   const [error, setError] = useState("");
+  const [loading, setLoading] = useState(true);
+  const [busy, setBusy] = useState(false);
 
-  async function load() {
-    try {
-      const params = new URLSearchParams();
-      if (q) params.set("q", q);
-      if (agency) params.set("agency", agency);
-      const res = await api<{ items: CaseRow[]; total: number }>(
-        `/api/admin/cases?${params}`
-      );
-      setItems(res.items);
-      setTotal(res.total);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Failed");
-    }
-  }
+  const load = useCallback(
+    async (pageNum = page) => {
+      setBusy(true);
+      setError("");
+      try {
+        const params = new URLSearchParams();
+        if (q.trim()) params.set("q", q.trim());
+        if (agency && agency !== "all") params.set("agency", agency);
+        params.set("limit", String(PAGE_SIZE));
+        params.set("skip", String((pageNum - 1) * PAGE_SIZE));
+        const res = await api<{ items: CaseRow[]; total: number }>(
+          `/api/admin/cases?${params}`
+        );
+        setItems(res.items);
+        setTotal(res.total);
+      } catch (e) {
+        const msg = e instanceof Error ? e.message : "Failed to load cases";
+        setError(msg);
+        toast.error(msg);
+      } finally {
+        setBusy(false);
+        setLoading(false);
+      }
+    },
+    [q, agency, page]
+  );
 
   useEffect(() => {
-    load();
-  }, []);
+    load(page);
+  }, [page]);
+
+  const pageCount = Math.max(1, Math.ceil(total / PAGE_SIZE));
+
+  function applyFilters() {
+    setPage(1);
+    load(1);
+  }
 
   return (
-    <div className="space-y-6">
+    <div className="flex flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Cases</h1>
         <p className="text-sm text-[var(--color-muted-foreground)]">
           {total} case(s)
         </p>
       </div>
-      <Card>
-        <CardHeader>
-          <CardTitle>Filters</CardTitle>
-        </CardHeader>
-        <CardContent className="flex flex-wrap gap-3">
-          <Input
-            placeholder="Search ref / text / ticket"
-            value={q}
-            onChange={(e) => setQ(e.target.value)}
-            className="max-w-xs"
-          />
-          <select
-            className="h-9 rounded-md border border-[var(--color-input)] px-3 text-sm"
-            value={agency}
-            onChange={(e) => setAgency(e.target.value)}
-          >
-            <option value="">All agencies</option>
+
+      <div className="flex flex-col gap-3 rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] p-3 sm:flex-row sm:items-center">
+        <Input
+          placeholder="Search ref / text / ticket"
+          value={q}
+          onChange={(e) => setQ(e.target.value)}
+          onKeyDown={(e) => e.key === "Enter" && applyFilters()}
+          className="sm:max-w-xs"
+          aria-label="Search cases"
+        />
+        <Select value={agency} onValueChange={setAgency}>
+          <SelectTrigger className="sm:w-48" aria-label="Filter by agency">
+            <SelectValue placeholder="All agencies" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">All agencies</SelectItem>
             {Object.entries(AGENCY_THEME).map(([id, a]) => (
-              <option key={id} value={id}>
+              <SelectItem key={id} value={id}>
                 {a.short}
-              </option>
+              </SelectItem>
             ))}
-          </select>
-          <Button onClick={load}>Apply</Button>
-        </CardContent>
-      </Card>
-      {error ? <p className="text-[var(--color-destructive)]">{error}</p> : null}
-      <div className="overflow-x-auto rounded-lg border border-[var(--color-border)] bg-white">
-        <table className="w-full text-sm">
-          <thead className="bg-[var(--color-muted)] text-left">
-            <tr>
-              <th className="p-3">Ref</th>
-              <th className="p-3">Category</th>
-              <th className="p-3">Agency</th>
-              <th className="p-3">Ticket</th>
-              <th className="p-3">Status</th>
-            </tr>
-          </thead>
-          <tbody>
-            {items.map((c) => (
-              <tr key={c.ref} className="border-t border-[var(--color-border)]">
-                <td className="p-3">
-                  <Link className="font-medium underline" to={`/admin/cases/${c.ref}`}>
-                    {c.ref}
-                  </Link>
-                </td>
-                <td className="p-3">{c.classification?.categoryLabel}</td>
-                <td className="p-3">{c.jurisdiction?.agencyLabel}</td>
-                <td className="p-3">{c.dispatch?.externalRef || "—"}</td>
-                <td className="p-3">
-                  <Badge>{c.status}</Badge>
-                </td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
+          </SelectContent>
+        </Select>
+        <Button
+          className="min-h-11"
+          onClick={applyFilters}
+          disabled={busy}
+        >
+          {busy ? "Loading…" : "Apply"}
+        </Button>
       </div>
+
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Could not load cases</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="rounded-lg border border-[var(--color-border)] bg-[var(--color-card)]">
+        {loading ? (
+          <div className="flex flex-col gap-2 p-4">
+            {Array.from({ length: 5 }).map((_, i) => (
+              <Skeleton key={i} className="h-11 w-full" />
+            ))}
+          </div>
+        ) : items.length === 0 ? (
+          <div className="p-4">
+            <Alert>
+              <AlertTitle>No cases found</AlertTitle>
+              <AlertDescription>
+                Try clearing filters or submit a report via Telegram.
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : (
+          <Table>
+            <TableHeader>
+              <TableRow className="bg-[var(--color-muted)]/60 hover:bg-[var(--color-muted)]/60">
+                <TableHead>Ref</TableHead>
+                <TableHead>Category</TableHead>
+                <TableHead>Agency</TableHead>
+                <TableHead>Ticket</TableHead>
+                <TableHead>Status</TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {items.map((c) => (
+                <TableRow key={c.ref}>
+                  <TableCell>
+                    <Link
+                      className="inline-flex min-h-11 items-center font-medium underline-offset-4 hover:underline"
+                      to={`/admin/cases/${c.ref}`}
+                    >
+                      {c.ref}
+                    </Link>
+                  </TableCell>
+                  <TableCell>
+                    {c.classification?.categoryLabel || "—"}
+                  </TableCell>
+                  <TableCell>
+                    {c.jurisdiction?.agencyLabel || "—"}
+                  </TableCell>
+                  <TableCell>{c.dispatch?.externalRef || "—"}</TableCell>
+                  <TableCell>
+                    <Badge variant="secondary">{c.status}</Badge>
+                  </TableCell>
+                </TableRow>
+              ))}
+            </TableBody>
+          </Table>
+        )}
+      </div>
+
+      {total > 0 ? (
+        <div className="flex flex-col items-center gap-2 sm:flex-row sm:justify-between">
+          <p className="text-sm text-[var(--color-muted-foreground)]">
+            Page {page} of {pageCount}
+          </p>
+          <Pagination>
+            <PaginationContent>
+              <PaginationItem>
+                <PaginationPrevious
+                  disabled={page <= 1 || busy}
+                  onClick={() => setPage((p) => Math.max(1, p - 1))}
+                />
+              </PaginationItem>
+              <PaginationItem>
+                <PaginationNext
+                  disabled={page >= pageCount || busy}
+                  onClick={() => setPage((p) => Math.min(pageCount, p + 1))}
+                />
+              </PaginationItem>
+            </PaginationContent>
+          </Pagination>
+        </div>
+      ) : null}
     </div>
   );
 }

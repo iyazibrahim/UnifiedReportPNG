@@ -1,19 +1,38 @@
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { api } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input, Label, Switch, Separator } from "@/components/ui/misc";
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert";
 
 type SettingsResponse = {
   toggles: Record<string, boolean>;
-  config: Record<string, { value: string; source: string | null; overridden: boolean }>;
+  config: Record<
+    string,
+    { value: string; source: string | null; overridden: boolean }
+  >;
   secrets: Record<
     string,
-    { configured: boolean; hint: string | null; source: string | null; overridden: boolean }
+    {
+      configured: boolean;
+      hint: string | null;
+      source: string | null;
+      overridden: boolean;
+    }
   >;
 };
 
-const TOGGLE_GROUPS: Array<{ title: string; keys: Array<{ key: string; label: string }> }> = [
+const TOGGLE_GROUPS: Array<{
+  title: string;
+  keys: Array<{ key: string; label: string }>;
+}> = [
   {
     title: "Channels & classification",
     keys: [
@@ -22,6 +41,7 @@ const TOGGLE_GROUPS: Array<{ title: string; keys: Array<{ key: string; label: st
       { key: "keywordFallbackEnabled", label: "Keyword fallback" },
       { key: "nominatimEnabled", label: "Nominatim reverse geocode" },
       { key: "mockDispatchEnabled", label: "Mock agency dispatch" },
+      { key: "abuseGuardsEnabled", label: "Abuse rate limits" },
     ],
   },
   {
@@ -41,6 +61,9 @@ const CONFIG_FIELDS = [
   { key: "telegramWebhookUrl", label: "Telegram webhook URL" },
   { key: "nominatimUserAgent", label: "Nominatim user agent" },
   { key: "mockPortalPin", label: "Mock portal PIN (optional)" },
+  { key: "abuseMaxPerHour", label: "Abuse max per hour" },
+  { key: "abuseMaxPerDay", label: "Abuse max per day" },
+  { key: "abuseCooldownSec", label: "Abuse cooldown (sec)" },
 ];
 
 const SECRET_FIELDS = [
@@ -60,29 +83,29 @@ export function SettingsPage() {
   const [config, setConfig] = useState<Record<string, string>>({});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<"features" | "config" | "secrets">("features");
-  const [msg, setMsg] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
 
   useEffect(() => {
-    api<SettingsResponse>("/api/admin/settings").then((res) => {
-      setData(res);
-      setToggles(res.toggles);
-      const cfg: Record<string, string> = {};
-      for (const [k, v] of Object.entries(res.config)) cfg[k] = v.value || "";
-      setConfig(cfg);
-    });
+    api<SettingsResponse>("/api/admin/settings")
+      .then((res) => {
+        setData(res);
+        setToggles(res.toggles);
+        const cfg: Record<string, string> = {};
+        for (const [k, v] of Object.entries(res.config)) cfg[k] = v.value || "";
+        setConfig(cfg);
+      })
+      .catch((e) => {
+        setError(e.message);
+        toast.error(e.message);
+      });
   }, []);
 
   async function save() {
     setSaving(true);
-    setMsg("");
     setError("");
     try {
-      const body: Record<string, unknown> = {
-        toggles,
-        config,
-      };
+      const body: Record<string, unknown> = { toggles, config };
       const secretPatch: Record<string, string> = {};
       for (const [k, v] of Object.entries(secrets)) {
         if (v !== "") secretPatch[k] = v;
@@ -95,42 +118,40 @@ export function SettingsPage() {
       setData(res);
       setToggles(res.toggles);
       setSecrets({});
-      setMsg("Settings saved. Runtime uses dashboard values over .env.");
+      toast.success("Settings saved");
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Save failed");
+      const msg = e instanceof Error ? e.message : "Save failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setSaving(false);
     }
   }
 
-  async function clearSecret(key: string) {
-    setSaving(true);
-    try {
-      const res = await api<SettingsResponse>("/api/admin/settings", {
-        method: "PATCH",
-        body: JSON.stringify({ secrets: { [key]: "" } }),
-      });
-      setData(res);
-      setMsg(`Cleared dashboard override for ${key} (falls back to env).`);
-    } catch (e) {
-      setError(e instanceof Error ? e.message : "Clear failed");
-    } finally {
-      setSaving(false);
-    }
+  if (!data && !error) {
+    return (
+      <p className="text-[var(--color-muted-foreground)]">Loading settings…</p>
+    );
   }
-
-  if (!data) return <p>Loading settings…</p>;
 
   return (
-    <div className="space-y-6 max-w-3xl">
+    <div className="flex max-w-3xl flex-col gap-6">
       <div>
         <h1 className="text-2xl font-semibold">Settings</h1>
         <p className="text-sm text-[var(--color-muted-foreground)]">
-          Dashboard overrides .env at runtime. OPS_USER / JWT_SECRET / Mongo stay in .env only.
+          Dashboard values override .env at runtime (except ops login / Mongo /
+          JWT).
         </p>
       </div>
 
-      <div className="flex gap-2 border-b border-[var(--color-border)] pb-2">
+      {error ? (
+        <Alert variant="destructive">
+          <AlertTitle>Error</AlertTitle>
+          <AlertDescription>{error}</AlertDescription>
+        </Alert>
+      ) : null}
+
+      <div className="flex flex-wrap gap-2">
         {(
           [
             ["features", "Features"],
@@ -140,8 +161,9 @@ export function SettingsPage() {
         ).map(([id, label]) => (
           <Button
             key={id}
-            variant={tab === id ? "default" : "ghost"}
             size="sm"
+            variant={tab === id ? "default" : "outline"}
+            className="min-h-11"
             onClick={() => setTab(id)}
           >
             {label}
@@ -149,16 +171,19 @@ export function SettingsPage() {
         ))}
       </div>
 
-      {tab === "features" ? (
-        <div className="space-y-4">
+      {tab === "features" && data ? (
+        <div className="flex flex-col gap-4">
           {TOGGLE_GROUPS.map((group) => (
             <Card key={group.title}>
               <CardHeader>
                 <CardTitle>{group.title}</CardTitle>
               </CardHeader>
-              <CardContent className="space-y-4">
+              <CardContent className="flex flex-col gap-4">
                 {group.keys.map(({ key, label }) => (
-                  <div key={key} className="flex items-center justify-between gap-4">
+                  <div
+                    key={key}
+                    className="flex items-center justify-between gap-4"
+                  >
                     <Label htmlFor={key}>{label}</Label>
                     <Switch
                       id={key}
@@ -175,33 +200,60 @@ export function SettingsPage() {
         </div>
       ) : null}
 
-      {tab === "config" ? (
+      {tab === "config" && data ? (
         <Card>
           <CardHeader>
             <CardTitle>Configuration</CardTitle>
-            <CardDescription>Non-secret env overrides</CardDescription>
+            <CardDescription>Non-secret runtime values</CardDescription>
           </CardHeader>
-          <CardContent className="space-y-4">
+          <CardContent className="flex flex-col gap-4">
             {CONFIG_FIELDS.map(({ key, label }) => (
-              <div key={key} className="space-y-2">
-                <Label htmlFor={key}>
-                  {label}
-                  {data.config[key]?.overridden ? (
-                    <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
-                      (dashboard)
-                    </span>
-                  ) : data.config[key]?.source === "env" ? (
-                    <span className="ml-2 text-xs text-[var(--color-muted-foreground)]">
-                      (from env)
-                    </span>
-                  ) : null}
-                </Label>
+              <div key={key} className="flex flex-col gap-2">
+                <Label htmlFor={key}>{label}</Label>
                 <Input
                   id={key}
                   value={config[key] || ""}
                   onChange={(e) =>
                     setConfig((c) => ({ ...c, [key]: e.target.value }))
                   }
+                  className="min-h-11"
+                />
+                <p className="text-xs text-[var(--color-muted-foreground)]">
+                  Source: {data.config[key]?.source || "default"}
+                  {data.config[key]?.overridden ? " (overridden)" : ""}
+                </p>
+              </div>
+            ))}
+          </CardContent>
+        </Card>
+      ) : null}
+
+      {tab === "secrets" && data ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>API keys</CardTitle>
+            <CardDescription>
+              Leave blank to keep existing. Stored encrypted in Mongo.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            {SECRET_FIELDS.map(({ key, label }) => (
+              <div key={key} className="flex flex-col gap-2">
+                <Label htmlFor={key}>{label}</Label>
+                <Input
+                  id={key}
+                  type="password"
+                  placeholder={
+                    data.secrets[key]?.configured
+                      ? `Configured ${data.secrets[key]?.hint || ""}`
+                      : "Not set"
+                  }
+                  value={secrets[key] || ""}
+                  onChange={(e) =>
+                    setSecrets((s) => ({ ...s, [key]: e.target.value }))
+                  }
+                  className="min-h-11"
+                  autoComplete="off"
                 />
               </div>
             ))}
@@ -209,65 +261,14 @@ export function SettingsPage() {
         </Card>
       ) : null}
 
-      {tab === "secrets" ? (
-        <Card>
-          <CardHeader>
-            <CardTitle>API keys / secrets</CardTitle>
-            <CardDescription>
-              Leave blank to keep current value. Clear override to fall back to .env.
-              Changing Telegram token while polling may require process restart.
-            </CardDescription>
-          </CardHeader>
-          <CardContent className="space-y-5">
-            {SECRET_FIELDS.map(({ key, label }) => {
-              const meta = data.secrets[key];
-              return (
-                <div key={key} className="space-y-2">
-                  <div className="flex items-center justify-between gap-2">
-                    <Label htmlFor={key}>{label}</Label>
-                    <span className="text-xs text-[var(--color-muted-foreground)]">
-                      {meta?.configured
-                        ? `${meta.hint} · ${meta.overridden ? "dashboard" : meta.source}`
-                        : "not configured"}
-                    </span>
-                  </div>
-                  <Input
-                    id={key}
-                    type="password"
-                    placeholder={meta?.configured ? "Enter new value to replace" : "Paste secret"}
-                    value={secrets[key] || ""}
-                    onChange={(e) =>
-                      setSecrets((s) => ({ ...s, [key]: e.target.value }))
-                    }
-                    autoComplete="off"
-                  />
-                  {meta?.overridden ? (
-                    <Button
-                      type="button"
-                      variant="outline"
-                      size="sm"
-                      onClick={() => clearSecret(key)}
-                    >
-                      Clear dashboard override
-                    </Button>
-                  ) : null}
-                  <Separator />
-                </div>
-              );
-            })}
-          </CardContent>
-        </Card>
-      ) : null}
-
-      <div className="flex items-center gap-3">
-        <Button onClick={save} disabled={saving}>
-          {saving ? "Saving…" : "Save changes"}
-        </Button>
-        {msg ? <p className="text-sm text-[var(--color-primary)]">{msg}</p> : null}
-        {error ? (
-          <p className="text-sm text-[var(--color-destructive)]">{error}</p>
-        ) : null}
-      </div>
+      <Separator />
+      <Button
+        className="min-h-11 w-fit"
+        onClick={save}
+        disabled={saving || !data}
+      >
+        {saving ? "Saving…" : "Save settings"}
+      </Button>
     </div>
   );
 }

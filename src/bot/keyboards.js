@@ -11,6 +11,15 @@ export function photoSkipKeyboard() {
   return new InlineKeyboard().text("Tiada foto", "photo_skip");
 }
 
+export function photoContinueKeyboard(hasPhotos = false) {
+  const kb = new InlineKeyboard();
+  if (hasPhotos) {
+    kb.text("Teruskan", "photo_done").row();
+  }
+  kb.text("Tiada foto", "photo_skip");
+  return kb;
+}
+
 export function confirmKeyboard() {
   return new InlineKeyboard()
     .text("Ya, lokasi ini betul", "loc_yes")

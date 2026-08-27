@@ -36,9 +36,19 @@ export const MSG = {
 
   askPhoto: [
     "Adakah anda mempunyai gambar sebagai bukti?",
-    "Sila hantar gambar, atau pilih *Tiada foto* untuk meneruskan.",
-    "Gambar membantu pegawai mengenal pasti keadaan di lapangan.",
+    "",
+    "Anda boleh hantar sehingga *5 gambar* (satu-satu atau album).",
+    "Tekan *Teruskan* bila selesai, atau *Tiada foto* jika tiada.",
   ].join("\n"),
+
+  photoReceived: (count, max) =>
+    `Gambar diterima (${count}/${max}). Hantar lagi jika perlu, atau tekan *Teruskan*.`,
+
+  photoLimitReached: (max) =>
+    `Had ${max} gambar telah dicapai. Sila tekan *Teruskan* untuk ke lokasi.`,
+
+  photoTooMany: (max) =>
+    `Maksimum ${max} gambar sahaja. Sila tekan *Teruskan* untuk ke lokasi.`,
 
   askDescriptionAfterPhoto: [
     "Gambar anda telah diterima. Terima kasih.",

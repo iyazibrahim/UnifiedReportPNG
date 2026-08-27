@@ -1,9 +1,11 @@
 import { Link, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { toast } from "sonner";
 import { api, AGENCY_THEME, STATUS_BM } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Badge } from "@/components/ui/misc";
+import { Badge } from "@/components/ui/badge";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 type Ticket = {
   _id?: string;
@@ -110,7 +112,11 @@ export function MockInboxPage() {
       />
 
       <main className="space-y-3 p-4">
-        {error ? <p className="text-red-700 text-sm">{error}</p> : null}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         {items.length === 0 ? (
           <Card>
             <CardContent className="p-5 text-sm text-[var(--color-muted-foreground)]">
@@ -182,8 +188,11 @@ export function MockTicketPage() {
         }
       );
       setTicket(res.ticket);
+      toast.success(`Status: ${STATUS_BM[status] || status}`);
     } catch (e) {
-      setError(e instanceof Error ? e.message : "Update failed");
+      const msg = e instanceof Error ? e.message : "Update failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setBusy(false);
     }
@@ -204,7 +213,11 @@ export function MockTicketPage() {
         showInbox
       />
       <main className="space-y-4 p-4">
-        {error ? <p className="text-red-700 text-sm">{error}</p> : null}
+        {error ? (
+          <Alert variant="destructive">
+            <AlertDescription>{error}</AlertDescription>
+          </Alert>
+        ) : null}
         {ticket ? (
           <>
             <Card>

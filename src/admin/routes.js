@@ -59,32 +59,65 @@ export function createAdminRouter(config) {
   });
 
   router.get("/stats", async (_req, res) => {
-    const [total, byStatus, byAgency, byCategory, tickets, recent] =
-      await Promise.all([
-        Case.countDocuments(),
-        Case.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
-        Case.aggregate([
-          { $group: { _id: "$jurisdiction.agencyId", count: { $sum: 1 } } },
-        ]),
-        Case.aggregate([
-          {
-            $group: {
-              _id: "$classification.categoryId",
-              count: { $sum: 1 },
-            },
-          },
-        ]),
-        MockTicket.find().select("status adapterId").lean(),
-        Case.find().sort({ createdAt: -1 }).limit(8).lean(),
-      ]);
+    const now = new Date();
+    const startThisMonth = new Date(now.getFullYear(), now.getMonth(), 1);
+    const startLastMonth = new Date(now.getFullYear(), now.getMonth() - 1, 1);
 
-    const byTicketStatus = { open: 0, in_progress: 0, closed: 0 };
-    for (const t of tickets) {
-      byTicketStatus[ticketBucket(t.status)] += 1;
+    const [
+      total,
+      byStatus,
+      byAgency,
+      byCategory,
+      tickets,
+      recent,
+      thisMonthCases,
+      lastMonthCases,
+      thisMonthTickets,
+      lastMonthTickets,
+    ] = await Promise.all([
+      Case.countDocuments(),
+      Case.aggregate([{ $group: { _id: "$status", count: { $sum: 1 } } }]),
+      Case.aggregate([
+        { $group: { _id: "$jurisdiction.agencyId", count: { $sum: 1 } } },
+      ]),
+      Case.aggregate([
+        {
+          $group: {
+            _id: "$classification.categoryId",
+            count: { $sum: 1 },
+          },
+        },
+      ]),
+      MockTicket.find().select("status adapterId createdAt").lean(),
+      Case.find().sort({ createdAt: -1 }).limit(8).lean(),
+      Case.countDocuments({ createdAt: { $gte: startThisMonth } }),
+      Case.countDocuments({
+        createdAt: { $gte: startLastMonth, $lt: startThisMonth },
+      }),
+      MockTicket.find({ createdAt: { $gte: startThisMonth } })
+        .select("status")
+        .lean(),
+      MockTicket.find({
+        createdAt: { $gte: startLastMonth, $lt: startThisMonth },
+      })
+        .select("status")
+        .lean(),
+    ]);
+
+    function bucketTickets(list, caseCount) {
+      const by = { open: 0, in_progress: 0, closed: 0 };
+      for (const t of list) {
+        by[ticketBucket(t.status)] += 1;
+      }
+      if (caseCount > list.length) {
+        by.open += caseCount - list.length;
+      }
+      return by;
     }
-    if (total > tickets.length) {
-      byTicketStatus.open += total - tickets.length;
-    }
+
+    const byTicketStatus = bucketTickets(tickets, total);
+    const thisMonthStatus = bucketTickets(thisMonthTickets, thisMonthCases);
+    const lastMonthStatus = bucketTickets(lastMonthTickets, lastMonthCases);
 
     const byCategoryLabeled = {};
     for (const row of byCategory) {
@@ -105,6 +138,19 @@ export function createAdminRouter(config) {
       byTicketStatus,
       recent,
       agencies: AGENCIES,
+      // Month-over-month for Stat Cards (current month vs previous)
+      kpis: {
+        total: thisMonthCases,
+        open: thisMonthStatus.open,
+        in_progress: thisMonthStatus.in_progress,
+        closed: thisMonthStatus.closed,
+      },
+      vsLastMonth: {
+        total: lastMonthCases,
+        open: lastMonthStatus.open,
+        in_progress: lastMonthStatus.in_progress,
+        closed: lastMonthStatus.closed,
+      },
     });
   });
 

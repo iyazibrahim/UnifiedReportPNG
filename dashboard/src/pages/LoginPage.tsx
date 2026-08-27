@@ -1,9 +1,17 @@
 import { useState, type FormEvent } from "react";
 import { useNavigate } from "react-router-dom";
+import { toast } from "sonner";
 import { api, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
+import {
+  Card,
+  CardContent,
+  CardDescription,
+  CardHeader,
+  CardTitle,
+} from "@/components/ui/card";
 import { Input, Label } from "@/components/ui/misc";
+import { Alert, AlertDescription } from "@/components/ui/alert";
 
 export function LoginPage() {
   const navigate = useNavigate();
@@ -23,9 +31,12 @@ export function LoginPage() {
         body: JSON.stringify({ username, password }),
       });
       setToken(res.token);
+      toast.success("Signed in");
       navigate("/admin");
     } catch (err) {
-      setError(err instanceof Error ? err.message : "Login failed");
+      const msg = err instanceof Error ? err.message : "Login failed";
+      setError(msg);
+      toast.error(msg);
     } finally {
       setLoading(false);
     }
@@ -41,17 +52,18 @@ export function LoginPage() {
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <form className="space-y-4" onSubmit={onSubmit}>
-            <div className="space-y-2">
+          <form className="flex flex-col gap-4" onSubmit={onSubmit}>
+            <div className="flex flex-col gap-2">
               <Label htmlFor="user">Username</Label>
               <Input
                 id="user"
                 value={username}
                 onChange={(e) => setUsername(e.target.value)}
                 autoComplete="username"
+                className="min-h-11"
               />
             </div>
-            <div className="space-y-2">
+            <div className="flex flex-col gap-2">
               <Label htmlFor="pass">Password</Label>
               <Input
                 id="pass"
@@ -59,12 +71,19 @@ export function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
+                className="min-h-11"
               />
             </div>
             {error ? (
-              <p className="text-sm text-[var(--color-destructive)]">{error}</p>
+              <Alert variant="destructive">
+                <AlertDescription>{error}</AlertDescription>
+              </Alert>
             ) : null}
-            <Button type="submit" className="w-full" disabled={loading}>
+            <Button
+              type="submit"
+              className="min-h-11 w-full"
+              disabled={loading}
+            >
               {loading ? "Signing in…" : "Sign in"}
             </Button>
           </form>
