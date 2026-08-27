@@ -1,25 +1,45 @@
 /**
- * Normalize a colloquial Penang landmark into a Nominatim search query via OpenRouter.
- * Does not invent lat/lng — only a searchable query string.
+ * Normalize a colloquial Penang landmark into Nominatim search queries via OpenRouter,
+ * then fall back to heuristic stripping (depan / berdekatan / traffic light / …).
  */
+import { buildLandmarkQueries } from "./landmarkQueries.js";
+import { forwardGeocodeCandidates } from "./geocode.js";
+
 const SYSTEM = `You help locate citizen reports in Pulau Pinang (Penang), Malaysia only.
 Given a landmark or place phrase in Malay/English slang, return JSON only:
-{"ok":true,"searchQuery":"<English or Malay place name suitable for OpenStreetMap Nominatim>","areaHint":"pulau"|"seberang"|"unknown","confidence":0.0}
+{"ok":true,"searchQuery":"<Nominatim-friendly place name>","searchQueries":["..."],"areaHint":"pulau"|"seberang"|"unknown","confidence":0.0}
 Rules:
-- searchQuery must be concrete and searchable (add George Town / Butterworth / Seberang Perai / Penang as needed).
-- Examples: "Padang Kota" → "Padang Kota Lama Esplanade George Town Penang"; "Jetty Butterworth" → "Butterworth Ferry Terminal Penang"; "TM Butterworth" → "Telekom Malaysia Butterworth Penang".
-- If outside Penang or nonsense: {"ok":false,"searchQuery":"","areaHint":"unknown","confidence":0}
+- Extract the ANCHOR place only. Drop relative words: depan, hadapan, berdekatan, dekat, tepi, traffic/traffik light, lampu isyarat, nearby, in front of.
+- If the user wrote A / B, include both anchors as separate searchQueries.
+- searchQuery must be a real named place + locality (George Town / Butterworth / Kepala Batas / Balik Pulau / Seberang Perai / Penang).
+- Do NOT put "traffic light" or "junction" in the query unless that is the official POI name.
+- Examples:
+  "traffik light berdekatan lotus kepala batas / bertam" → searchQueries: ["Lotus Kepala Batas Penang","Lotus Bertam Penang"]
+  "depan masjid jamek sungai rusa" → searchQueries: ["Masjid Jamek Sungai Rusa Penang"]
+  "Padang Kota" → "Padang Kota Lama Esplanade George Town Penang"
+  "Jetty Butterworth" → "Butterworth Ferry Terminal Penang"
+- If clearly outside Penang or nonsense: {"ok":false,"searchQuery":"","searchQueries":[],"areaHint":"unknown","confidence":0}
 - Never invent latitude or longitude.`;
+
+function llmQueriesFromParsed(parsed) {
+  const list = [];
+  if (Array.isArray(parsed.searchQueries)) {
+    for (const q of parsed.searchQueries) list.push(String(q || "").trim());
+  }
+  if (parsed.searchQuery) list.push(String(parsed.searchQuery).trim());
+  return list.filter(Boolean);
+}
 
 export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } = {}) {
   const raw = String(text || "").trim();
   if (!raw) {
-    return { ok: false, searchQuery: "", areaHint: "unknown", confidence: 0, method: "empty" };
+    return { ok: false, searchQuery: "", searchQueries: [], areaHint: "unknown", confidence: 0, method: "empty" };
   }
   if (!apiKey) {
     return {
       ok: true,
       searchQuery: `${raw} Penang Malaysia`,
+      searchQueries: [`${raw} Penang Malaysia`],
       areaHint: "unknown",
       confidence: 0.3,
       method: "raw_fallback",
@@ -46,6 +66,7 @@ export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } 
       return {
         ok: true,
         searchQuery: `${raw} Penang Malaysia`,
+        searchQueries: [`${raw} Penang Malaysia`],
         areaHint: "unknown",
         confidence: 0.3,
         method: "llm_http_fallback",
@@ -59,18 +80,20 @@ export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } 
       return {
         ok: true,
         searchQuery: `${raw} Penang Malaysia`,
+        searchQueries: [`${raw} Penang Malaysia`],
         areaHint: "unknown",
         confidence: 0.3,
         method: "llm_parse_fallback",
       };
     }
     const parsed = JSON.parse(content.slice(jsonStart, jsonEnd + 1));
-    const ok = Boolean(parsed.ok);
-    const searchQuery = String(parsed.searchQuery || "").trim();
-    if (!ok || !searchQuery) {
+    const searchQueries = llmQueriesFromParsed(parsed);
+    const ok = Boolean(parsed.ok) && searchQueries.length > 0;
+    if (!ok) {
       return {
         ok: false,
         searchQuery: "",
+        searchQueries: [],
         areaHint: "unknown",
         confidence: Number(parsed.confidence) || 0,
         method: "llm",
@@ -81,7 +104,8 @@ export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } 
       : "unknown";
     return {
       ok: true,
-      searchQuery,
+      searchQuery: searchQueries[0],
+      searchQueries,
       areaHint: hint,
       confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.5)),
       method: "llm",
@@ -90,9 +114,30 @@ export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } 
     return {
       ok: true,
       searchQuery: `${raw} Penang Malaysia`,
+      searchQueries: [`${raw} Penang Malaysia`],
       areaHint: "unknown",
       confidence: 0.3,
       method: "llm_error_fallback",
     };
   }
+}
+
+/**
+ * LLM (optional) + heuristic query stripping, then Nominatim until a hit.
+ */
+export async function resolveCitizenPlace(
+  text,
+  { apiKey, model, userAgent, fetchImpl } = {}
+) {
+  const raw = String(text || "").trim();
+  if (!raw) return null;
+  const resolved = await resolveLandmarkWithLlm(raw, { apiKey, model, fetchImpl });
+  const queries = buildLandmarkQueries(raw, resolved.searchQueries || []);
+  const hit = await forwardGeocodeCandidates(queries, { userAgent, fetchImpl });
+  if (!hit) return null;
+  return {
+    ...hit,
+    method: resolved.method,
+    queriesTried: queries,
+  };
 }

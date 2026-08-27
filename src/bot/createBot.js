@@ -1,8 +1,8 @@
 import { Bot, webhookCallback } from "grammy";
 import { classifyReport } from "../classify/classify.js";
 import { resolveJurisdiction } from "../jurisdiction/resolver.js";
-import { reverseGeocode, forwardGeocode } from "../location/geocode.js";
-import { resolveLandmarkWithLlm } from "../location/resolveLandmark.js";
+import { reverseGeocode } from "../location/geocode.js";
+import { resolveCitizenPlace } from "../location/resolveLandmark.js";
 import {
   MSG,
   previewMessage,
@@ -169,18 +169,9 @@ async function ingestLocation(ctx, session, config) {
 
 async function resolveTextPlace(ctx, session, config, placeText) {
   await ctx.reply(MSG.locatingPlace);
-  const resolved = await resolveLandmarkWithLlm(placeText, {
+  const hit = await resolveCitizenPlace(placeText, {
     apiKey: config.openRouterKey,
     model: config.openRouterModel,
-  });
-  if (!resolved.ok || !resolved.searchQuery) {
-    session.draft.geocodeFails = (session.draft.geocodeFails || 0) + 1;
-    session.step = "awaiting_location";
-    await saveSession(session);
-    await ctx.reply(MSG.placeNotFound, { reply_markup: locationKeyboard() });
-    return;
-  }
-  const hit = await forwardGeocode(resolved.searchQuery, {
     userAgent: config.nominatimUserAgent,
   });
   if (!hit || !Number.isFinite(hit.lat) || !Number.isFinite(hit.lng)) {
@@ -190,7 +181,7 @@ async function resolveTextPlace(ctx, session, config, placeText) {
     await ctx.reply(MSG.placeNotFound, { reply_markup: locationKeyboard() });
     return;
   }
-  const source = resolved.method === "llm" ? "landmark_ai" : "text_geocode";
+  const source = hit.method === "llm" ? "landmark_ai" : "text_geocode";
   const truth = captureGeocodedTruth({
     lat: hit.lat,
     lng: hit.lng,

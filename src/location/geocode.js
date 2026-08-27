@@ -78,7 +78,7 @@ export async function forwardGeocode(query, { userAgent, fetchImpl } = {}) {
   url.searchParams.set("q", q);
   url.searchParams.set("format", "jsonv2");
   url.searchParams.set("addressdetails", "1");
-  url.searchParams.set("limit", "3");
+  url.searchParams.set("limit", "5");
   url.searchParams.set("countrycodes", "my");
   url.searchParams.set("viewbox", PENANG_VIEWBOX);
   url.searchParams.set("bounded", "0");
@@ -87,7 +87,7 @@ export async function forwardGeocode(query, { userAgent, fetchImpl } = {}) {
   if (!res.ok) return null;
   const rows = await res.json();
   if (!Array.isArray(rows) || !rows.length) return null;
-  const best = rows[0];
+  const best = pickPenangHit(rows) || rows[0];
   const address = best.address || {};
   return {
     lat: Number(best.lat),
@@ -98,5 +98,35 @@ export async function forwardGeocode(query, { userAgent, fetchImpl } = {}) {
     city: address.city || address.town || address.county || null,
     postcode: address.postcode || null,
     raw: best,
+    query: q,
   };
+}
+
+function pickPenangHit(rows) {
+  const [west, south, east, north] = PENANG_VIEWBOX.split(",").map(Number);
+  return (
+    rows.find((row) => {
+      const lat = Number(row.lat);
+      const lng = Number(row.lon);
+      return lat >= south && lat <= north && lng >= west && lng <= east;
+    }) || null
+  );
+}
+
+/** Try queries in order until Nominatim returns a hit. */
+export async function forwardGeocodeCandidates(
+  queries,
+  { userAgent, fetchImpl } = {}
+) {
+  const seen = new Set();
+  for (const q of queries || []) {
+    const key = String(q || "").trim().toLowerCase();
+    if (!key || seen.has(key)) continue;
+    seen.add(key);
+    const hit = await forwardGeocode(q, { userAgent, fetchImpl });
+    if (hit && Number.isFinite(hit.lat) && Number.isFinite(hit.lng)) {
+      return hit;
+    }
+  }
+  return null;
 }

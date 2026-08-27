@@ -29,7 +29,8 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Bot multi-photo: max 5, Teruskan / album debounce
 - [x] Mock portals hub: bento picker with official agency logos (`/admin/mock-portals`)
 - [x] Bot main menu: Aduan Baharu / Semak Aduan / Bantuan; GPS keyboard only on location step
-- [x] Bot recover after cleared chat: /start commands menu + idle re-welcome
+- [x] Landmark geocode: strip relative phrases (depan/berdekatan/traffic light) and retry Nominatim queries
+
 
 ## How to run
 
