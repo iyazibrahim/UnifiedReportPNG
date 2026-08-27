@@ -263,12 +263,14 @@ export function createBot(config, { gateway } = {}) {
 
   bot.on("message:location", async (ctx) => {
     const session = await loadSession(ctx.from.id);
-    if (!hasIntakeText(session) && !hasPhotos(session)) {
-      await ctx.reply(MSG.needText);
-      return;
-    }
     if (!hasIntakeText(session)) {
-      await ctx.reply(MSG.needText);
+      if (hasPhotos(session)) {
+        session.step = "awaiting_description";
+        await saveSession(session);
+        await ctx.reply(MSG.askDescriptionAfterPhoto);
+      } else {
+        await ctx.reply(MSG.needText);
+      }
       return;
     }
     await ingestLocation(ctx, session, config);
@@ -280,12 +282,16 @@ export function createBot(config, { gateway } = {}) {
     if (fileId) session.draft.photoFileIds.push(fileId);
     const caption = ctx.message.caption?.trim();
     if (caption) session.draft.text = caption;
+
+    // Photo without caption (or still no text): keep the photo, ask for a short description
     if (!hasIntakeText(session)) {
-      session.step = "idle";
+      session.draft.askedPhoto = true;
+      session.step = "awaiting_description";
       await saveSession(session);
-      await ctx.reply(MSG.needText);
+      await ctx.reply(MSG.askDescriptionAfterPhoto);
       return;
     }
+
     session.draft.askedPhoto = true;
     session.step = "awaiting_location";
     await saveSession(session);
@@ -312,6 +318,15 @@ export function createBot(config, { gateway } = {}) {
 
     if (session.step === "awaiting_submit") {
       await ctx.reply("Sila tekan Hantar atau Batal pada ringkasan tadi.");
+      return;
+    }
+
+    // Photo already received; citizen types the problem in plain text
+    if (session.step === "awaiting_description") {
+      session.draft.text = text;
+      session.step = "awaiting_location";
+      await saveSession(session);
+      await ctx.reply(MSG.askLocation, { reply_markup: locationKeyboard() });
       return;
     }
 

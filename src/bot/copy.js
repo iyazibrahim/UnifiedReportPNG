@@ -38,6 +38,13 @@ export const MSG = {
     "Gambar membantu pegawai mengenal pasti keadaan di lapangan.",
   ].join("\n"),
 
+  askDescriptionAfterPhoto: [
+    "Gambar anda telah diterima. Terima kasih.",
+    "",
+    "Sila taip ringkas masalah yang berlaku.",
+    "Contoh: jalan berlubang / sampah bertimbun / paip bocor.",
+  ].join("\n"),
+
   askLocation: [
     "Sila kongsi lokasi kejadian.",
     "",
@@ -64,7 +71,7 @@ export const MSG = {
     "Aduan ini telah dibatalkan. Sila hantar keterangan baharu untuk memulakan aduan semula.",
 
   needText:
-    "Sila hantar keterangan masalah terlebih dahulu (teks, atau caption pada gambar).",
+    "Sila taip keterangan masalah terlebih dahulu.\nContoh: jalan berlubang / sampah bertimbun / paip bocor.",
 
   needLocation:
     "Sila kongsi atau pilih lokasi kejadian terlebih dahulu melalui butang lokasi di bawah.",
