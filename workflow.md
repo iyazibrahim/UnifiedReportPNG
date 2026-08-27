@@ -34,6 +34,7 @@ Admin dashboard + mock agency portals implemented on top of the Telegram MVP.
 - [x] Landmark seed expanded (~1400+ OSM places: masjid/school/hospital/supermarket/mall)
 - [x] Worship categories fixed: `place_of_worship` classified by OSM religion/name (masjid, temple, church, shrine, gurdwara, place_of_worship) — seed reclassified
 - [x] Location boundary: allow ~3 km buffer, reject farther pins (GPS + typed)
+- [x] Admin shell: fixed sidebar, Log out pinned at footer, only main content scrolls
 
 ## How to run
 
@@ -66,3 +67,9 @@ Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins r
 - Design Village Penang was wrongly pinned at Bertam / Kepala Batas (`spu`, 5.5245, 100.442). Official site + Nominatim confirm Bandar Cassia / Batu Kawan (`sps`, 5.2436662, 100.4364736). Aliases updated (batu kawan / bandar cassia); misleading bertam-only aliases removed.
 - Spot-check: Lotus's Kepala Batas remains correct in Bertam (`spu`). Entopia daerah/address corrected to Teluk Bahang / `barat_daya` (coords OK; label was wrong).
 - `locateDaerah(5.2436662, 100.4364736)` → `sps`.
+
+## Admin layout (2026-08-27)
+
+- Sidebar is viewport-height and no longer scrolls with the page.
+- Log out stays pinned at the sidebar footer (desktop); compact header button on mobile.
+- Only the main content pane scrolls.
