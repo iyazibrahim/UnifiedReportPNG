@@ -29,6 +29,7 @@ import {
 } from "../location/model.js";
 import { generateRef } from "../cases/ref.js";
 import { saveDispatchedCase } from "../cases/service.js";
+import { cancelCaseIfReceived } from "../cases/cancel.js";
 import { Case, reporterFilter } from "../models/Case.js";
 import { MockTicket } from "../models/MockTicket.js";
 import {
@@ -649,6 +650,45 @@ export async function handleIntakeEvent(event, reply, config, gateway) {
         return;
       }
       await replyStatusList(reply, channel, channelUserId);
+      return;
+    }
+    if (cmd === "cancel") {
+      const arg = event.commandArg?.trim();
+      if (!arg) {
+        await reply.sendText(
+          "Sila taip /cancel PG-YYYYMMDD-XXXX untuk membatalkan aduan yang masih *Diterima*.",
+          { keyboard: "menu" }
+        );
+        return;
+      }
+      const found = await Case.findOne({
+        ref: arg.toUpperCase(),
+        ...reporterFilter(channel, channelUserId),
+      });
+      if (!found) {
+        await reply.sendText("Rujukan tidak dijumpai.", { keyboard: "menu" });
+        return;
+      }
+      const result = await cancelCaseIfReceived(found.ref, {
+        actor: "pelapor",
+      });
+      if (!result.ok) {
+        if (result.reason === "not_cancellable") {
+          await reply.sendText(
+            `Aduan ${found.ref} tidak boleh dibatalkan (status: ${STATUS_BM[result.status] || result.status}).`,
+            { keyboard: "menu" }
+          );
+          return;
+        }
+        await reply.sendText("Aduan tidak boleh dibatalkan.", {
+          keyboard: "menu",
+        });
+        return;
+      }
+      await reply.sendText(
+        `Aduan ${found.ref} telah dibatalkan.`,
+        { keyboard: "menu" }
+      );
       return;
     }
   }

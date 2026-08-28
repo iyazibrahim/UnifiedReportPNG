@@ -1,4 +1,7 @@
 import crypto from "node:crypto";
+import mongoose from "mongoose";
+import { authenticateUser, userToClaims } from "../auth/users.js";
+import { verifyPassword } from "../auth/password.js";
 
 function b64url(buf) {
   return Buffer.from(buf)
@@ -50,16 +53,42 @@ export function verifyToken(token, secret) {
   }
 }
 
-export function requireAdminAuth(config) {
+const ADMIN_ROLES = new Set(["super_admin", "admin"]);
+const AGENCY_ROLES = new Set(["agency_admin", "agency_operator"]);
+
+export async function loginAdmin(username, password, config) {
+  if (mongoose.connection.readyState === 1) {
+    const user = await authenticateUser(username, password);
+    if (user) {
+      return createToken(userToClaims(user), config.jwtSecret);
+    }
+  }
+  if (username === config.opsUser) {
+    const envPass = config.opsPassword || "";
+    const ok =
+      password === envPass ||
+      (envPass && (await verifyPassword(password, envPass)));
+    if (ok) {
+      return createToken(
+        { sub: username, role: "super_admin", agencyId: null },
+        config.jwtSecret
+      );
+    }
+  }
+  return null;
+}
+
+function extractToken(req) {
+  const header = req.headers.authorization || "";
+  const [scheme, bearer] = header.split(" ");
+  if (scheme === "Bearer" && bearer) return bearer;
+  if (req.query.access_token) return String(req.query.access_token);
+  return null;
+}
+
+export function requireAuth(config, { roles } = {}) {
   return (req, res, next) => {
-    const header = req.headers.authorization || "";
-    const [scheme, bearer] = header.split(" ");
-    const token =
-      scheme === "Bearer" && bearer
-        ? bearer
-        : req.query.access_token
-          ? String(req.query.access_token)
-          : null;
+    const token = extractToken(req);
     if (!token) {
       return res.status(401).json({ error: "Unauthorized" });
     }
@@ -67,17 +96,50 @@ export function requireAdminAuth(config) {
     if (!claims?.sub) {
       return res.status(401).json({ error: "Unauthorized" });
     }
+    if (roles?.length && !roles.includes(claims.role)) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    req.user = claims;
     req.admin = claims;
     next();
   };
 }
 
-export function loginAdmin(username, password, config) {
-  if (
-    username !== config.opsUser ||
-    password !== config.opsPassword
-  ) {
-    return null;
+export function requireAdminAuth(config) {
+  return requireAuth(config, {
+    roles: [...ADMIN_ROLES],
+  });
+}
+
+export function requireAgencyAuth(config) {
+  return (req, res, next) => {
+    const token = extractToken(req);
+    if (!token) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const claims = verifyToken(token, config.jwtSecret);
+    if (!claims?.sub) {
+      return res.status(401).json({ error: "Unauthorized" });
+    }
+    const isAdmin = ADMIN_ROLES.has(claims.role);
+    const isAgency = AGENCY_ROLES.has(claims.role);
+    if (!isAdmin && !isAgency) {
+      return res.status(403).json({ error: "Forbidden" });
+    }
+    req.user = claims;
+    req.admin = claims;
+    next();
+  };
+}
+
+export function assertAgencyAccess(claims, agencyId) {
+  if (ADMIN_ROLES.has(claims.role)) return true;
+  if (AGENCY_ROLES.has(claims.role) && claims.agencyId === agencyId) {
+    return true;
   }
-  return createToken({ sub: username, role: "admin" }, config.jwtSecret);
+  return false;
+}
+
+export function isAdminRole(role) {
+  return ADMIN_ROLES.has(role);
 }

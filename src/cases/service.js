@@ -34,6 +34,7 @@ export async function saveDispatchedCase({
     jurisdiction: draft.jurisdiction,
     dispatch: { ...dispatch, requestPayload: dispatch.requestPayload },
     status: needsTriage ? "triaged" : "dispatched",
+    consentAt: new Date(),
   });
   try {
     emitCaseCreated(doc);

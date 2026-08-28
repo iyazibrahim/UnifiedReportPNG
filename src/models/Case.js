@@ -28,9 +28,15 @@ const caseSchema = new mongoose.Schema(
         "dispatched",
         "triaged",
         "failed",
+        "cancelled",
       ],
       default: "draft",
     },
+    consentAt: { type: Date, default: null },
+    hidden: { type: Boolean, default: false, index: true },
+    hiddenAt: { type: Date, default: null },
+    hiddenBy: { type: String, default: null },
+    hiddenReason: { type: String, default: null },
   },
   { timestamps: true }
 );

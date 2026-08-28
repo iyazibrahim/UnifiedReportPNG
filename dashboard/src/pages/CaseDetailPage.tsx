@@ -112,10 +112,49 @@ export function CaseDetailPage() {
   const agencyId = c.jurisdiction?.agencyId || "";
   const portal =
     c.dispatch?.externalRef && agencyId
-      ? `/mock/${agencyId}/${c.dispatch.externalRef}`
+      ? `/portals/${agencyId}/${c.dispatch.externalRef}`
       : agencyId
-        ? `/mock/${agencyId}`
+        ? `/portals/${agencyId}`
         : null;
+
+  async function hideCase() {
+    if (!ref || !confirm("Sembunyikan aduan ini? (soft-hide, tidak dipadam)")) return;
+    try {
+      await api(`/api/admin/cases/${ref}/hide`, {
+        method: "PATCH",
+        body: JSON.stringify({ reason: "admin_hide" }),
+      });
+      toast.success("Aduan disembunyikan");
+      window.location.href = "/admin/cases";
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  async function reassign(agency: string) {
+    if (!ref) return;
+    try {
+      await api(`/api/admin/cases/${ref}/reassign`, {
+        method: "PATCH",
+        body: JSON.stringify({ agencyId: agency }),
+      });
+      toast.success("Agensi dikemas kini");
+      window.location.reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
+
+  async function cancelCase() {
+    if (!ref || !confirm("Batalkan aduan (hanya jika masih Diterima)?")) return;
+    try {
+      await api(`/api/admin/cases/${ref}/cancel`, { method: "POST" });
+      toast.success("Aduan dibatalkan");
+      window.location.reload();
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    }
+  }
 
   return (
     <div className="space-y-6">
@@ -135,13 +174,19 @@ export function CaseDetailPage() {
             {c.jurisdiction?.reason}
           </p>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
           <Badge>{c.status}</Badge>
           {portal ? (
             <Button onClick={() => (window.location.href = portal)}>
               View in {AGENCY_THEME[agencyId]?.short || "portal"}
             </Button>
           ) : null}
+          <Button variant="outline" size="sm" onClick={cancelCase}>
+            Batalkan
+          </Button>
+          <Button variant="outline" size="sm" onClick={hideCase}>
+            Sembunyikan
+          </Button>
         </div>
       </div>
 
@@ -298,6 +343,25 @@ export function CaseDetailPage() {
                 No agency ticket linked
               </p>
             )}
+          </CardContent>
+        </Card>
+
+        <Card className="lg:col-span-2">
+          <CardHeader>
+            <CardTitle>Tugaskan semula agensi</CardTitle>
+          </CardHeader>
+          <CardContent className="flex flex-wrap gap-2">
+            {Object.entries(AGENCY_THEME).map(([id, a]) => (
+              <Button
+                key={id}
+                size="sm"
+                variant={agencyId === id ? "default" : "outline"}
+                disabled={agencyId === id}
+                onClick={() => reassign(id)}
+              >
+                {a.short}
+              </Button>
+            ))}
           </CardContent>
         </Card>
       </div>

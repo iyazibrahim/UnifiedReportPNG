@@ -41,6 +41,21 @@ Admin dashboard + agency portals on a multi-channel intake platform (Telegram + 
 - [x] Login page: split-screen layout with carousel, password toggle, flag stripe edge
 - [x] Rebrand dashboard UI to **OnePenang Dashboard** (login, sidebar, title, agency portals)
 
+## Production readiness (2026-08-28)
+
+- [x] Governance config: data controller, super-admins, retention, SLA hours (Settings → Ownership & policy)
+- [x] User accounts + RBAC (super_admin, admin, agency roles); seeded ops + per-agency operators
+- [x] Agency API `/api/agencies` (alias `/api/mock`); JWT required; login rate limit
+- [x] Audit log (`/api/admin/audit`); actor on ticket status history
+- [x] Ticket status `acknowledged` (Diakui); citizen `/cancel` while `received`
+- [x] Case soft-hide, admin reassign, consentAt + PDPA notice in bot welcome
+- [x] Official API register hook (`src/adapters/official.js`) when agency API key set
+- [x] Docker `media_data` volume; production secret validation on boot
+- [x] Agency portal: dashboard + apps layout toggle, timeline, OSM map, photos, SLA badge
+- [x] WhatsApp status template name in Settings (WABA production prep)
+
+Agency portal login: `/portals/{agencyId}/login` (default password `changeme` for `{agencyId}_ops` on first seed).
+
 ## How to run
 
 ```bash

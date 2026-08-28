@@ -1,4 +1,5 @@
 import { statusUpdateMessage } from "../bot/copy.js";
+import { resolveConfig } from "../settings/service.js";
 
 /**
  * Soft-fail notifier: never throws to the caller path.
@@ -35,6 +36,18 @@ export async function notifyReporterStatusUpdate(senders, caseDoc, ticket) {
     status: ticket.status,
     note: ticket.statusHistory?.at(-1)?.note,
   });
+
+  if (channel === "whatsapp") {
+    const tpl = await resolveConfig("whatsappStatusTemplateName");
+    if (tpl.value) {
+      // Production: use Meta utility template when session window expired.
+      // For now, session text send; template name stored for WABA setup.
+      console.info(
+        `WhatsApp status notify (template configured: ${tpl.value})`
+      );
+    }
+  }
+
   try {
     await sendMessage(chatId, text);
     return { sent: true, channel };

@@ -3,7 +3,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { telegramWebhookMiddleware } from "./bot/createBot.js";
 import { createAdminRouter } from "./admin/routes.js";
-import { createMockRouter } from "./mock/routes.js";
+import { createAgencyRouter } from "./agencies/routes.js";
 import { createWhatsAppWebhookRouter } from "./channels/whatsapp/webhook.js";
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
@@ -44,7 +44,9 @@ export function createApp({ config, bot, gateway, senders } = {}) {
   };
 
   app.use("/api/admin", createAdminRouter(config));
-  app.use("/api/mock", createMockRouter({ senders: notifySenders }));
+  const agencyRouter = createAgencyRouter({ config, senders: notifySenders });
+  app.use("/api/agencies", agencyRouter);
+  app.use("/api/mock", agencyRouter);
 
   app.get("/ops", (_req, res) => {
     res.redirect(302, "/admin");

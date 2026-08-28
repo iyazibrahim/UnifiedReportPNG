@@ -29,6 +29,7 @@ const settingsSchema = new mongoose.Schema(
       abuseMaxPerHour: { type: String, default: "5" },
       abuseMaxPerDay: { type: String, default: "15" },
       abuseCooldownSec: { type: String, default: "60" },
+      whatsappStatusTemplateName: { type: String, default: "" },
     },
     secrets: {
       telegramBotToken: { type: String, default: "" },
@@ -44,6 +45,14 @@ const settingsSchema = new mongoose.Schema(
       epintasApiKey: { type: String, default: "" },
     },
     updatedBy: { type: String, default: null },
+    governance: {
+      dataControllerName: { type: String, default: "" },
+      superAdminNames: { type: String, default: "" },
+      retentionYearsMetadata: { type: String, default: "7" },
+      retentionYearsPhotos: { type: String, default: "2" },
+      slaHoursJson: { type: String, default: "{}" },
+      vendorAccessNotes: { type: String, default: "" },
+    },
   },
   { timestamps: true }
 );

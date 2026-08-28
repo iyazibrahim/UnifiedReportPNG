@@ -7,7 +7,12 @@ import { CasesPage } from "@/pages/CasesListPage";
 import { CaseDetailPage } from "@/pages/CaseDetailPage";
 import { SettingsPage } from "@/pages/SettingsPage";
 import { MockPortalsHubPage } from "@/pages/MockPortalsHubPage";
-import { MockInboxPage, MockTicketPage } from "@/pages/MockPages";
+import {
+  AgencyInboxPage,
+  AgencyOverviewPage,
+  AgencyTicketPage,
+} from "@/pages/MockPages";
+import { AgencyLoginPage } from "@/pages/AgencyLoginPage";
 import { getToken } from "@/lib/api";
 
 function RequireAuth({ children }: { children: ReactNode }) {
@@ -37,15 +42,19 @@ export default function App() {
       </Route>
       <Route path="/mock" element={<Navigate to="/admin/portals" replace />} />
       <Route path="/portals" element={<Navigate to="/admin/portals" replace />} />
-      <Route path="/mock/:agencyId" element={<MockInboxPage />} />
-      <Route path="/portals/:agencyId" element={<MockInboxPage />} />
-      <Route
-        path="/mock/:agencyId/:externalRef"
-        element={<MockTicketPage />}
-      />
+      <Route path="/portals/:agencyId/login" element={<AgencyLoginPage />} />
+      <Route path="/mock/:agencyId/login" element={<AgencyLoginPage />} />
+      <Route path="/portals/:agencyId" element={<AgencyOverviewPage />} />
+      <Route path="/portals/:agencyId/inbox" element={<AgencyInboxPage />} />
       <Route
         path="/portals/:agencyId/:externalRef"
-        element={<MockTicketPage />}
+        element={<AgencyTicketPage />}
+      />
+      <Route path="/mock/:agencyId" element={<AgencyOverviewPage />} />
+      <Route path="/mock/:agencyId/inbox" element={<AgencyInboxPage />} />
+      <Route
+        path="/mock/:agencyId/:externalRef"
+        element={<AgencyTicketPage />}
       />
       <Route path="*" element={<Navigate to="/admin" replace />} />
     </Routes>

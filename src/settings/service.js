@@ -26,6 +26,7 @@ const CONFIG_KEYS = [
   "abuseMaxPerHour",
   "abuseMaxPerDay",
   "abuseCooldownSec",
+  "whatsappStatusTemplateName",
 ];
 
 const ENV_MAP = {
@@ -44,6 +45,7 @@ const ENV_MAP = {
   abuseMaxPerHour: "ABUSE_MAX_PER_HOUR",
   abuseMaxPerDay: "ABUSE_MAX_PER_DAY",
   abuseCooldownSec: "ABUSE_COOLDOWN_SEC",
+  whatsappStatusTemplateName: "WHATSAPP_STATUS_TEMPLATE_NAME",
 };
 
 const CACHE_TTL_MS = 5_000;

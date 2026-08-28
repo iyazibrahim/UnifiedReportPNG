@@ -67,6 +67,7 @@ const CONFIG_FIELDS = [
   { key: "abuseMaxPerHour", label: "Abuse max per hour" },
   { key: "abuseMaxPerDay", label: "Abuse max per day" },
   { key: "abuseCooldownSec", label: "Abuse cooldown (sec)" },
+  { key: "whatsappStatusTemplateName", label: "WhatsApp status template (Meta utility)" },
 ];
 
 const SECRET_FIELDS = [
@@ -88,9 +89,20 @@ export function SettingsPage() {
   const [toggles, setToggles] = useState<Record<string, boolean>>({});
   const [config, setConfig] = useState<Record<string, string>>({});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
-  const [tab, setTab] = useState<"features" | "config" | "secrets">("features");
+  const [tab, setTab] = useState<
+    "features" | "config" | "secrets" | "governance"
+  >("features");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [governance, setGovernance] = useState({
+    dataControllerName: "",
+    superAdminNames: "",
+    retentionYearsMetadata: "7",
+    retentionYearsPhotos: "2",
+    slaHoursJson: "{}",
+    vendorAccessNotes: "",
+  });
+  const [govReady, setGovReady] = useState(false);
 
   useEffect(() => {
     api<SettingsResponse>("/api/admin/settings")
@@ -105,7 +117,33 @@ export function SettingsPage() {
         setError(e.message);
         toast.error(e.message);
       });
+    api<{
+      governance: typeof governance;
+      ready: boolean;
+    }>("/api/admin/governance")
+      .then((res) => {
+        setGovernance(res.governance);
+        setGovReady(res.ready);
+      })
+      .catch(() => {});
   }, []);
+
+  async function saveGovernance() {
+    setSaving(true);
+    try {
+      const res = await api<{ governance: typeof governance; ready: boolean }>(
+        "/api/admin/governance",
+        { method: "PATCH", body: JSON.stringify(governance) }
+      );
+      setGovernance(res.governance);
+      setGovReady(res.ready);
+      toast.success("Governance saved");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Save failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function save() {
     setSaving(true);
@@ -163,6 +201,7 @@ export function SettingsPage() {
             ["features", "Features"],
             ["config", "Configuration"],
             ["secrets", "API keys"],
+            ["governance", "Ownership & policy"],
           ] as const
         ).map(([id, label]) => (
           <Button
@@ -278,14 +317,111 @@ export function SettingsPage() {
         </Card>
       ) : null}
 
+      {tab === "governance" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Ownership & policy</CardTitle>
+            <CardDescription>
+              Pending owner confirmation — required before public go-live.
+              {govReady ? " Ready." : " Not ready yet."}
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="flex flex-col gap-4">
+            <div className="flex flex-col gap-2">
+              <Label>Data controller (legal entity)</Label>
+              <Input
+                value={governance.dataControllerName}
+                onChange={(e) =>
+                  setGovernance((g) => ({
+                    ...g,
+                    dataControllerName: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Super-admin names (comma-separated)</Label>
+              <Input
+                value={governance.superAdminNames}
+                onChange={(e) =>
+                  setGovernance((g) => ({
+                    ...g,
+                    superAdminNames: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="flex flex-col gap-2">
+                <Label>Retention years (metadata)</Label>
+                <Input
+                  value={governance.retentionYearsMetadata}
+                  onChange={(e) =>
+                    setGovernance((g) => ({
+                      ...g,
+                      retentionYearsMetadata: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Retention years (photos)</Label>
+                <Input
+                  value={governance.retentionYearsPhotos}
+                  onChange={(e) =>
+                    setGovernance((g) => ({
+                      ...g,
+                      retentionYearsPhotos: e.target.value,
+                    }))
+                  }
+                />
+              </div>
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>SLA hours per agency (JSON)</Label>
+              <Input
+                value={governance.slaHoursJson}
+                onChange={(e) =>
+                  setGovernance((g) => ({
+                    ...g,
+                    slaHoursJson: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <div className="flex flex-col gap-2">
+              <Label>Vendor access notes</Label>
+              <Input
+                value={governance.vendorAccessNotes}
+                onChange={(e) =>
+                  setGovernance((g) => ({
+                    ...g,
+                    vendorAccessNotes: e.target.value,
+                  }))
+                }
+              />
+            </div>
+            <Button
+              className="w-fit"
+              onClick={saveGovernance}
+              disabled={saving}
+            >
+              Save governance
+            </Button>
+          </CardContent>
+        </Card>
+      ) : null}
+
       <Separator />
-      <Button
-        className="min-h-11 w-fit"
-        onClick={save}
-        disabled={saving || !data}
-      >
-        {saving ? "Saving…" : "Save settings"}
-      </Button>
+      {tab !== "governance" ? (
+        <Button
+          className="min-h-11 w-fit"
+          onClick={save}
+          disabled={saving || !data}
+        >
+          {saving ? "Saving…" : "Save settings"}
+        </Button>
+      ) : null}
     </div>
   );
 }

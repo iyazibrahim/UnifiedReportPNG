@@ -27,15 +27,19 @@ services:
       TELEGRAM_WEBHOOK_SECRET: ${TELEGRAM_WEBHOOK_SECRET:-}
       OPENROUTER_API_KEY: ${OPENROUTER_API_KEY:-}
       OPENROUTER_MODEL: ${OPENROUTER_MODEL:-openai/gpt-4o-mini}
-      NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-UnifiedReportPenang/1.0 (mvp)}
+      NOMINATIM_USER_AGENT: ${NOMINATIM_USER_AGENT:-UnifiedReportPenang/1.0}
       OPS_USER: ${OPS_USER:-ops}
       OPS_PASSWORD: ${OPS_PASSWORD:-changeme}
       JWT_SECRET: ${JWT_SECRET:-change-me-in-production}
       SETTINGS_ENCRYPTION_KEY: ${SETTINGS_ENCRYPTION_KEY:-}
       MOCK_PORTAL_PIN: ${MOCK_PORTAL_PIN:-}
+      WHATSAPP_STATUS_TEMPLATE_NAME: ${WHATSAPP_STATUS_TEMPLATE_NAME:-}
+    volumes:
+      - media_data:/app/data/media
     depends_on:
       mongo:
         condition: service_healthy
 
 volumes:
   mongo_data:
+  media_data:

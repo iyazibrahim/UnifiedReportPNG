@@ -76,6 +76,7 @@ export const AGENCY_THEME: Record<
 
 export const STATUS_BM: Record<string, string> = {
   received: "Diterima",
+  acknowledged: "Diakui",
   in_progress: "Dalam tindakan",
   resolved: "Selesai",
   rejected: "Ditolak",

@@ -3,7 +3,7 @@ import assert from "node:assert/strict";
 import { createToken, verifyToken, loginAdmin } from "../src/admin/auth.js";
 
 describe("admin auth", () => {
-  const secret = "test-jwt";
+  const secret = "test-jwt-secret-long-enough";
 
   it("creates and verifies a token", () => {
     const token = createToken({ sub: "ops" }, secret, 60);
@@ -15,8 +15,8 @@ describe("admin auth", () => {
     assert.equal(verifyToken("a.b.c", secret), null);
   });
 
-  it("logs in with ops credentials", () => {
-    const token = loginAdmin("ops", "changeme", {
+  it("logs in with ops credentials from env fallback", async () => {
+    const token = await loginAdmin("ops", "changeme", {
       opsUser: "ops",
       opsPassword: "changeme",
       jwtSecret: secret,
@@ -25,9 +25,9 @@ describe("admin auth", () => {
     assert.equal(verifyToken(token, secret).sub, "ops");
   });
 
-  it("rejects bad password", () => {
+  it("rejects bad password", async () => {
     assert.equal(
-      loginAdmin("ops", "wrong", {
+      await loginAdmin("ops", "wrong", {
         opsUser: "ops",
         opsPassword: "changeme",
         jwtSecret: secret,

@@ -13,10 +13,18 @@ export function emptyDraft() {
 
 const STATUS_BM = {
   received: "Diterima",
+  acknowledged: "Diakui",
   in_progress: "Dalam tindakan",
   resolved: "Selesai",
   rejected: "Ditolak",
 };
+
+export const PDPA_NOTICE = [
+  "Notis privasi (PDPA):",
+  "• Data anda (teks, gambar, lokasi, ID chat) digunakan untuk mengurus aduan awam.",
+  "• Aduan akan dikongsi dengan agensi berkaitan untuk tindakan.",
+  "• Hubungi pentadbir sistem jika anda memerlukan akses atau pembetulan data.",
+].join("\n");
 
 export const MSG = {
   welcome: [
@@ -24,6 +32,8 @@ export const MSG = {
     "",
     "Ini ialah *Saluran Aduan Bersatu Pulau Pinang*.",
     "Anda boleh menghantar aduan awam tanpa memuat turun aplikasi baharu.",
+    "",
+    PDPA_NOTICE,
     "",
     "Gunakan butang menu di bawah:",
     "• *Aduan Baharu* — buat aduan",

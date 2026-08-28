@@ -1,4 +1,5 @@
 import { loadConfig } from "./config.js";
+import { assertProductionSecrets } from "./config/validate.js";
 import { connectDb } from "./db.js";
 import { createApp } from "./app.js";
 import { createBot, setupBotUi } from "./bot/createBot.js";
@@ -9,6 +10,7 @@ import {
   resolveSecret,
   resolveConfig,
 } from "./settings/service.js";
+import { ensureUsersSeeded } from "./auth/users.js";
 import {
   createWhatsAppClient,
   ensureMediaDir,
@@ -16,9 +18,11 @@ import {
 import { resolveWhatsAppCreds } from "./channels/whatsapp/webhook.js";
 
 const config = loadConfig();
+assertProductionSecrets(config);
 
 await connectDb(config.mongoUri);
 await ensureSettingsSeeded();
+await ensureUsersSeeded(config);
 await ensureMediaDir();
 
 const tokenResolved = await resolveSecret("telegramBotToken");
