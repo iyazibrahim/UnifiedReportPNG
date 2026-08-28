@@ -23,6 +23,7 @@ import {
   listUsers,
   createUser,
   setUserDisabled,
+  resetUserPassword,
 } from "../auth/users.js";
 import { cancelCaseIfReceived } from "../cases/cancel.js";
 import { buildExternalRef } from "../adapters/mocks.js";
@@ -137,6 +138,28 @@ export function createAdminRouter(config) {
       ip: req.ip,
     });
     res.json({ user });
+  });
+
+  router.patch("/users/:id/password", async (req, res) => {
+    if (req.admin?.role !== "super_admin") {
+      return res.status(403).json({ error: "Super-admin only" });
+    }
+    try {
+      const user = await resetUserPassword(
+        req.params.id,
+        req.body?.newPassword
+      );
+      await writeAudit({
+        action: "password_reset_admin",
+        actorUsername: req.admin?.sub,
+        targetType: "user",
+        targetId: user.username,
+        ip: req.ip,
+      });
+      res.json({ ok: true, user: { username: user.username } });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
   });
 
   router.get("/events", (req, res) => {

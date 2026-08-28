@@ -2,37 +2,21 @@ import { Link } from "react-router-dom";
 import { AGENCY_THEME } from "@/lib/api";
 import { cn } from "@/lib/utils";
 
-const PORTALS: Array<{
-  id: keyof typeof AGENCY_THEME;
-  blurb: string;
-  span: string;
-}> = [
-  {
-    id: "pearl_mbpp",
-    blurb: "Majlis Bandaraya Pulau Pinang — kebersihan, longkang lokal, kemudahan awam",
-    span: "sm:col-span-2 sm:row-span-2",
-  },
-  {
-    id: "aspire_mbsp",
-    blurb: "Majlis Bandaraya Seberang Perai — aduan PBT di Seberang",
-    span: "sm:col-span-2 sm:row-span-2",
-  },
-  {
-    id: "myjalan",
-    blurb: "JKR / KKR — jalan persekutuan, lampu isyarat, infrastruktur jalan",
-    span: "sm:col-span-2",
-  },
-  {
-    id: "pbapp",
-    blurb: "Bekalan air Pulau Pinang — paip bocor, gangguan air",
-    span: "",
-  },
-  {
-    id: "epintas",
-    blurb: "PSUK triage — banjir, luar bidang, kes tidak pasti",
-    span: "",
-  },
-];
+const PORTAL_ORDER = [
+  "pearl_mbpp",
+  "aspire_mbsp",
+  "myjalan",
+  "pbapp",
+  "epintas",
+] as const;
+
+const SPANS: Record<string, string> = {
+  pearl_mbpp: "sm:col-span-2 sm:row-span-2",
+  aspire_mbsp: "sm:col-span-2 sm:row-span-2",
+  myjalan: "sm:col-span-2",
+  pbapp: "",
+  epintas: "",
+};
 
 export function MockPortalsHubPage() {
   return (
@@ -45,35 +29,36 @@ export function MockPortalsHubPage() {
       </div>
 
       <div className="grid auto-rows-[minmax(140px,auto)] grid-cols-1 gap-4 sm:grid-cols-4">
-        {PORTALS.map((p, i) => {
-          const theme = AGENCY_THEME[p.id];
+        {PORTAL_ORDER.map((id, i) => {
+          const theme = AGENCY_THEME[id];
+          const span = SPANS[id] || "";
           return (
             <Link
-              key={p.id}
-              to={`/portals/${p.id}`}
+              key={id}
+              to={`/portals/${id}`}
               className={cn(
-                "group relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl border border-[var(--color-border)] bg-[var(--color-card)] p-5 shadow-sm transition duration-300",
+                "group relative flex min-h-[140px] flex-col justify-between overflow-hidden rounded-2xl border p-5 shadow-sm transition duration-300",
                 "hover:-translate-y-0.5 hover:shadow-md focus-visible:outline-none focus-visible:ring-2 focus-visible:ring-[var(--color-ring)]",
-                p.span
+                span
               )}
               style={{
                 animation: `urp-bento-in 420ms ease both`,
                 animationDelay: `${i * 60}ms`,
+                background: `linear-gradient(135deg, ${theme.gradientFrom} 0%, ${theme.gradientTo} 70%)`,
+                borderColor: `${theme.accent}22`,
               }}
             >
               <div
-                className="pointer-events-none absolute inset-0 opacity-[0.08] transition group-hover:opacity-[0.14]"
-                style={{
-                  background: `radial-gradient(circle at 20% 20%, ${theme.accent}, transparent 55%)`,
-                }}
+                className="pointer-events-none absolute inset-y-0 left-0 w-1"
+                style={{ background: theme.accent, opacity: 0.35 }}
               />
-        <div className="relative flex items-start justify-between gap-3">
+              <div className="relative flex items-start justify-between gap-3">
                 <img
                   src={theme.logo}
                   alt={`${theme.short} logo`}
                   className={cn(
                     "object-contain bg-white p-1 shadow-sm ring-1 ring-black/5",
-                    p.span.includes("row-span-2")
+                    span.includes("row-span-2")
                       ? "size-16 rounded-xl"
                       : "size-12 rounded-lg"
                   )}
@@ -89,13 +74,16 @@ export function MockPortalsHubPage() {
                 <h2
                   className={cn(
                     "font-semibold tracking-tight",
-                    p.span.includes("row-span-2") ? "text-xl" : "text-base"
+                    span.includes("row-span-2") ? "text-xl" : "text-base"
                   )}
                 >
                   {theme.label}
                 </h2>
-                <p className="mt-1 text-sm text-[var(--color-muted-foreground)]">
-                  {p.blurb}
+                <p className="mt-1 text-sm font-medium text-[var(--color-foreground)]/80">
+                  {theme.mission}
+                </p>
+                <p className="mt-1 text-xs text-[var(--color-muted-foreground)]">
+                  {theme.blurb}
                 </p>
               </div>
             </Link>

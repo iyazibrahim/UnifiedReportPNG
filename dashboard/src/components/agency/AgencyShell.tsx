@@ -1,49 +1,42 @@
-import { Link, Outlet, useNavigate, useParams } from "react-router-dom";
-import { LayoutGrid, Smartphone, LogOut } from "lucide-react";
+import { Link, useNavigate, useParams } from "react-router-dom";
+import { LogOut, User, ChevronDown } from "lucide-react";
 import { AGENCY_THEME } from "@/lib/api";
 import {
   clearAgencyToken,
-  getAgencyLayout,
-  setAgencyLayout,
-  type AgencyLayout,
+  getSessionClaims,
+  isAdminClaims,
 } from "@/lib/agencyAuth";
 import { useState } from "react";
+import { AgencyPasswordModal } from "./AgencyPasswordModal";
 
 export function AgencyShell({ children }: { children: React.ReactNode }) {
   const { agencyId = "" } = useParams();
   const theme = AGENCY_THEME[agencyId];
   const navigate = useNavigate();
-  const [layout, setLayout] = useState<AgencyLayout>(getAgencyLayout());
+  const [menuOpen, setMenuOpen] = useState(false);
+  const [passwordOpen, setPasswordOpen] = useState(false);
 
   if (!theme) return <p className="p-6">Unknown agency</p>;
 
-  function toggleLayout(next: AgencyLayout) {
-    setAgencyLayout(next);
-    setLayout(next);
-  }
+  const claims = getSessionClaims(agencyId);
+  const username = claims?.sub || "Pengguna";
+  const showAdminLink = isAdminClaims(claims);
 
   function logout() {
-    clearAgencyToken();
+    clearAgencyToken(agencyId);
     navigate(`/portals/${agencyId}/login`);
   }
 
-  const isDashboard = layout === "dashboard";
-
   return (
     <div
-      className={cnShell(isDashboard)}
+      className="min-h-screen bg-[var(--color-background)]"
       style={{ ["--agency" as string]: theme.accent }}
     >
       <header
         className="sticky top-0 z-20 text-white shadow-sm"
         style={{ background: theme.accent }}
       >
-        <div
-          className={cnInner(
-            isDashboard,
-            "flex flex-wrap items-center justify-between gap-3 px-4 py-3"
-          )}
-        >
+        <div className="mx-auto flex max-w-6xl flex-wrap items-center justify-between gap-3 px-4 py-3">
           <div className="flex items-center gap-3">
             <img
               src={theme.logo}
@@ -59,37 +52,45 @@ export function AgencyShell({ children }: { children: React.ReactNode }) {
               </h1>
             </div>
           </div>
-          <div className="flex flex-wrap items-center gap-2">
+          <div className="relative flex items-center gap-2">
             <button
               type="button"
-              onClick={() => toggleLayout("dashboard")}
-              className={layoutBtn(isDashboard)}
-              title="Dashboard"
+              onClick={() => setMenuOpen((v) => !v)}
+              className="flex items-center gap-2 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium"
             >
-              <LayoutGrid className="h-4 w-4" />
-              <span className="hidden sm:inline">Dashboard</span>
+              <User className="h-3.5 w-3.5" />
+              <span className="max-w-[120px] truncate">{username}</span>
+              <ChevronDown className="h-3.5 w-3.5" />
             </button>
-            <button
-              type="button"
-              onClick={() => toggleLayout("app")}
-              className={layoutBtn(!isDashboard)}
-              title="Apps mode"
-            >
-              <Smartphone className="h-4 w-4" />
-              <span className="hidden sm:inline">Apps</span>
-            </button>
-            <button
-              type="button"
-              onClick={logout}
-              className="flex items-center gap-1 rounded-full bg-white/15 px-3 py-1.5 text-xs font-medium"
-            >
-              <LogOut className="h-3.5 w-3.5" />
-              Log keluar
-            </button>
+            {menuOpen ? (
+              <div className="absolute right-0 top-full z-30 mt-1 min-w-[180px] rounded-lg border border-[var(--color-border)] bg-[var(--color-card)] py-1 text-sm text-[var(--color-foreground)] shadow-lg">
+                <button
+                  type="button"
+                  className="block w-full px-4 py-2 text-left hover:bg-[var(--color-accent)]"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    setPasswordOpen(true);
+                  }}
+                >
+                  Tukar kata laluan
+                </button>
+                <button
+                  type="button"
+                  className="flex w-full items-center gap-2 px-4 py-2 text-left hover:bg-[var(--color-accent)]"
+                  onClick={() => {
+                    setMenuOpen(false);
+                    logout();
+                  }}
+                >
+                  <LogOut className="h-3.5 w-3.5" />
+                  Log keluar
+                </button>
+              </div>
+            ) : null}
           </div>
         </div>
-        {isDashboard ? (
-          <nav className="flex gap-1 border-t border-white/20 px-4 py-2 text-sm">
+        <nav className="flex gap-1 border-t border-white/20 px-4 py-2 text-sm">
+          <div className="mx-auto flex w-full max-w-6xl gap-1">
             <Link
               to={`/portals/${agencyId}`}
               className="rounded-md px-3 py-1.5 hover:bg-white/10"
@@ -102,44 +103,23 @@ export function AgencyShell({ children }: { children: React.ReactNode }) {
             >
               Peti masuk
             </Link>
-            <Link
-              to="/admin"
-              className="ml-auto rounded-md px-3 py-1.5 text-white/80 hover:bg-white/10"
-            >
-              OnePenang Admin
-            </Link>
-          </nav>
-        ) : null}
+            {showAdminLink ? (
+              <Link
+                to="/admin"
+                className="ml-auto rounded-md px-3 py-1.5 text-white/80 hover:bg-white/10"
+              >
+                OnePenang Admin
+              </Link>
+            ) : null}
+          </div>
+        </nav>
       </header>
-      <main className={cnMain(isDashboard)}>{children}</main>
+      <main className="mx-auto max-w-6xl p-4 md:p-6">{children}</main>
+      <AgencyPasswordModal
+        agencyId={agencyId}
+        open={passwordOpen}
+        onClose={() => setPasswordOpen(false)}
+      />
     </div>
-  );
-}
-
-function layoutBtn(active: boolean) {
-  return `flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-medium ${
-    active ? "bg-white text-[var(--agency)]" : "bg-white/15"
-  }`;
-}
-
-function cnShell(dashboard: boolean) {
-  return `min-h-screen bg-[var(--color-background)] ${
-    dashboard ? "" : "mx-auto max-w-lg"
-  }`;
-}
-
-function cnInner(dashboard: boolean, base: string) {
-  return dashboard ? `${base} mx-auto max-w-6xl` : base;
-}
-
-function cnMain(dashboard: boolean) {
-  return dashboard ? "mx-auto max-w-6xl p-4 md:p-6" : "p-4";
-}
-
-export function AgencyLayout() {
-  return (
-    <AgencyShell>
-      <Outlet />
-    </AgencyShell>
   );
 }

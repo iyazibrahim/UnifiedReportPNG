@@ -54,6 +54,18 @@ Admin dashboard + agency portals on a multi-channel intake platform (Telegram + 
 - [x] Agency portal: dashboard + apps layout toggle, timeline, OSM map, photos, SLA badge
 - [x] WhatsApp status template name in Settings (WABA production prep)
 
+## Agency portal UX & auth (2026-08-28)
+
+- [x] Per-agency JWT storage (`urp_agency_tokens` map); fixes 403 when switching portals
+- [x] Admin JWT fallback for super_admin/admin on agency API
+- [x] Bento hub cards: subtle per-agency gradients + mission blurbs
+- [x] Split-screen themed agency login pages
+- [x] Removed Dashboard/Apps toggle — single responsive layout (Ringkasan | Peti masuk)
+- [x] KPI cards, inbox zebra rows, SLA tint, empty states
+- [x] Account menu: change password (agency) + logout per agency
+- [x] Admin Settings → Users tab: list users, super-admin password reset
+- [x] APIs: `POST /api/agencies/me/password`, `PATCH /api/admin/users/:id/password`
+
 Agency portal login: `/portals/{agencyId}/login` (default password `changeme` for `{agencyId}_ops` on first seed).
 
 ## How to run
@@ -79,7 +91,7 @@ Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins r
 
 ## Validation
 
-- `npm test` — unit tests including landmark DB / daerah / boundary / WhatsApp webhook
+- `npm test` — 89 unit tests (incl. password helpers, landmark DB, WhatsApp webhook)
 - `npm run build:dashboard` — Vite production build OK
 
 ## Landmark coordinate fixes (2026-08-27)

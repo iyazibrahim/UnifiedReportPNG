@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import { toast } from "sonner";
-import { api } from "@/lib/api";
+import { api, getToken } from "@/lib/api";
+import { decodeJwtPayload } from "@/lib/agencyAuth";
 import { Button } from "@/components/ui/button";
 import {
   Card,
@@ -84,14 +85,27 @@ const SECRET_FIELDS = [
   { key: "epintasApiKey", label: "ePINTAS API key" },
 ];
 
+type AdminUser = {
+  _id: string;
+  username: string;
+  role: string;
+  agencyId?: string | null;
+  displayName?: string;
+  disabled?: boolean;
+};
+
 export function SettingsPage() {
   const [data, setData] = useState<SettingsResponse | null>(null);
   const [toggles, setToggles] = useState<Record<string, boolean>>({});
   const [config, setConfig] = useState<Record<string, string>>({});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<
-    "features" | "config" | "secrets" | "governance"
+    "features" | "config" | "secrets" | "governance" | "users"
   >("features");
+  const [users, setUsers] = useState<AdminUser[]>([]);
+  const [usersLoading, setUsersLoading] = useState(false);
+  const [resetUserId, setResetUserId] = useState<string | null>(null);
+  const [resetPassword, setResetPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
   const [governance, setGovernance] = useState({
@@ -103,6 +117,9 @@ export function SettingsPage() {
     vendorAccessNotes: "",
   });
   const [govReady, setGovReady] = useState(false);
+
+  const adminClaims = decodeJwtPayload(getToken() || "");
+  const isSuperAdmin = adminClaims?.role === "super_admin";
 
   useEffect(() => {
     api<SettingsResponse>("/api/admin/settings")
@@ -127,6 +144,36 @@ export function SettingsPage() {
       })
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (tab !== "users") return;
+    setUsersLoading(true);
+    api<{ items: AdminUser[] }>("/api/admin/users")
+      .then((res) => setUsers(res.items))
+      .catch((e) => toast.error(e.message))
+      .finally(() => setUsersLoading(false));
+  }, [tab]);
+
+  async function resetUserPasswordSubmit(userId: string) {
+    if (!resetPassword || resetPassword.length < 8) {
+      toast.error("Password must be at least 8 characters");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api(`/api/admin/users/${userId}/password`, {
+        method: "PATCH",
+        body: JSON.stringify({ newPassword: resetPassword }),
+      });
+      toast.success("Password reset");
+      setResetUserId(null);
+      setResetPassword("");
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Reset failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function saveGovernance() {
     setSaving(true);
@@ -202,6 +249,7 @@ export function SettingsPage() {
             ["config", "Configuration"],
             ["secrets", "API keys"],
             ["governance", "Ownership & policy"],
+            ["users", "Users"],
           ] as const
         ).map(([id, label]) => (
           <Button
@@ -317,6 +365,103 @@ export function SettingsPage() {
         </Card>
       ) : null}
 
+      {tab === "users" ? (
+        <Card>
+          <CardHeader>
+            <CardTitle>Users</CardTitle>
+            <CardDescription>
+              Agency operators and admin accounts. Password reset requires
+              super-admin.
+            </CardDescription>
+          </CardHeader>
+          <CardContent className="space-y-4">
+            {usersLoading ? (
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                Loading users…
+              </p>
+            ) : users.length === 0 ? (
+              <p className="text-sm text-[var(--color-muted-foreground)]">
+                No users found.
+              </p>
+            ) : (
+              <div className="overflow-x-auto">
+                <table className="w-full text-sm">
+                  <thead>
+                    <tr className="border-b text-left">
+                      <th className="pb-2 pr-4 font-medium">Username</th>
+                      <th className="pb-2 pr-4 font-medium">Role</th>
+                      <th className="pb-2 pr-4 font-medium">Agency</th>
+                      <th className="pb-2 font-medium">Actions</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {users.map((u) => (
+                      <tr key={u._id} className="border-b last:border-0">
+                        <td className="py-2 pr-4 font-medium">{u.username}</td>
+                        <td className="py-2 pr-4">{u.role}</td>
+                        <td className="py-2 pr-4">{u.agencyId || "—"}</td>
+                        <td className="py-2">
+                          {isSuperAdmin ? (
+                            resetUserId === u._id ? (
+                              <div className="flex flex-wrap items-center gap-2">
+                                <Input
+                                  type="password"
+                                  placeholder="New password"
+                                  value={resetPassword}
+                                  onChange={(e) =>
+                                    setResetPassword(e.target.value)
+                                  }
+                                  className="min-h-9 max-w-[180px]"
+                                  autoComplete="new-password"
+                                />
+                                <Button
+                                  size="sm"
+                                  disabled={saving}
+                                  onClick={() =>
+                                    resetUserPasswordSubmit(u._id)
+                                  }
+                                >
+                                  Save
+                                </Button>
+                                <Button
+                                  size="sm"
+                                  variant="outline"
+                                  onClick={() => {
+                                    setResetUserId(null);
+                                    setResetPassword("");
+                                  }}
+                                >
+                                  Cancel
+                                </Button>
+                              </div>
+                            ) : (
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                onClick={() => {
+                                  setResetUserId(u._id);
+                                  setResetPassword("");
+                                }}
+                              >
+                                Reset password
+                              </Button>
+                            )
+                          ) : (
+                            <span className="text-xs text-[var(--color-muted-foreground)]">
+                              Super-admin only
+                            </span>
+                          )}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            )}
+          </CardContent>
+        </Card>
+      ) : null}
+
       {tab === "governance" ? (
         <Card>
           <CardHeader>
@@ -413,7 +558,7 @@ export function SettingsPage() {
       ) : null}
 
       <Separator />
-      {tab !== "governance" ? (
+      {tab !== "governance" && tab !== "users" ? (
         <Button
           className="min-h-11 w-fit"
           onClick={save}

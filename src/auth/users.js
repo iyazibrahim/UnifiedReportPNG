@@ -88,3 +88,31 @@ export async function setUserDisabled(userId, disabled) {
     .select("-passwordHash")
     .lean();
 }
+
+export async function changeUserPassword(userId, { currentPassword, newPassword }) {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+  const ok = await verifyPassword(currentPassword, user.passwordHash);
+  if (!ok) throw new Error("Current password is incorrect");
+  if (!newPassword || String(newPassword).length < 8) {
+    throw new Error("New password must be at least 8 characters");
+  }
+  user.passwordHash = await hashPassword(newPassword);
+  await user.save();
+  return user;
+}
+
+export async function resetUserPassword(userId, newPassword) {
+  const user = await User.findById(userId);
+  if (!user) throw new Error("User not found");
+  if (!newPassword || String(newPassword).length < 8) {
+    throw new Error("Password must be at least 8 characters");
+  }
+  user.passwordHash = await hashPassword(newPassword);
+  await user.save();
+  return user;
+}
+
+export async function findUserByUsername(username) {
+  return User.findOne({ username: String(username).trim() }).lean();
+}

@@ -20,6 +20,7 @@ import { checkLoginRateLimit, resetLoginRateLimit } from "../auth/rateLimit.js";
 import { fetchCasePhoto } from "../admin/telegramMedia.js";
 import { getSlaHoursForAgency } from "../governance/service.js";
 import { computeDueAt } from "../adapters/official.js";
+import { changeUserPassword } from "../auth/users.js";
 
 function agencyMiddleware(req, res, next) {
   const agencyId = String(req.params.agencyId || "");
@@ -65,6 +66,26 @@ export function createAgencyRouter({ config, senders = {} } = {}) {
     }
     resetLoginRateLimit(`agency-login:${ip}`);
     res.json({ token, user: { username } });
+  });
+
+  router.post("/me/password", requireAgencyAuth(config), async (req, res) => {
+    try {
+      const uid = req.user?.uid;
+      if (!uid) return res.status(400).json({ error: "Invalid session" });
+      const { currentPassword, newPassword } = req.body || {};
+      await changeUserPassword(uid, { currentPassword, newPassword });
+      await writeAudit({
+        action: "password_change_self",
+        actorUserId: uid,
+        actorUsername: req.user?.sub,
+        targetType: "user",
+        targetId: req.user?.sub,
+        ip: req.ip,
+      });
+      res.json({ ok: true });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
   });
 
   router.get("/agencies", (_req, res) => {

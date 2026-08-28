@@ -1,11 +1,12 @@
 import { Link, Navigate, useNavigate, useParams } from "react-router-dom";
 import { useEffect, useState } from "react";
+import { Inbox } from "lucide-react";
 import { toast } from "sonner";
 import { AGENCY_THEME, STATUS_BM } from "@/lib/api";
 import {
   agencyApi,
-  getAgencyLayout,
   getAgencyToken,
+  hasAgencySession,
 } from "@/lib/agencyAuth";
 import { AgencyShell } from "@/components/agency/AgencyShell";
 import { ReportMap } from "@/components/agency/ReportMap";
@@ -23,6 +24,7 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { cn } from "@/lib/utils";
 
 export type Ticket = {
   _id?: string;
@@ -54,7 +56,7 @@ export type Ticket = {
 
 function RequireAgencyAuth({ children }: { children: React.ReactNode }) {
   const { agencyId = "" } = useParams();
-  if (!getAgencyToken()) {
+  if (!hasAgencySession(agencyId)) {
     return <Navigate to={`/portals/${agencyId}/login`} replace />;
   }
   return children;
@@ -65,7 +67,7 @@ function agencyPhotoUrl(
   externalRef: string,
   fileId: string
 ) {
-  const token = getAgencyToken() || "";
+  const token = getAgencyToken(agencyId) || "";
   return `/api/agencies/${agencyId}/tickets/${encodeURIComponent(externalRef)}/photos/${encodeURIComponent(fileId)}?access_token=${encodeURIComponent(token)}`;
 }
 
@@ -85,18 +87,70 @@ const NEXT_ACTIONS: Record<string, Array<{ id: string; label: string }>> = {
   ],
 };
 
+function statusBadgeVariant(status: string) {
+  if (status === "resolved") return "default";
+  if (status === "rejected") return "destructive";
+  if (status === "in_progress") return "secondary";
+  return "outline";
+}
+
+function KpiCard({
+  label,
+  value,
+  accent,
+  fill,
+}: {
+  label: string;
+  value: number;
+  accent: string;
+  fill: string;
+}) {
+  return (
+    <Card
+      className="overflow-hidden border-[var(--color-border)]"
+      style={{
+        background: `linear-gradient(135deg, ${fill} 0%, #ffffff 80%)`,
+        borderLeftWidth: 4,
+        borderLeftColor: accent,
+      }}
+    >
+      <CardContent className="p-4">
+        <p className="text-xs font-medium text-[var(--color-muted-foreground)]">
+          {label}
+        </p>
+        <p className="mt-1 text-3xl font-semibold tabular-nums">{value}</p>
+      </CardContent>
+    </Card>
+  );
+}
+
+function EmptyInbox() {
+  return (
+    <div className="flex flex-col items-center justify-center gap-2 py-12 text-center">
+      <Inbox className="h-10 w-10 text-[var(--color-muted-foreground)]" />
+      <p className="text-sm font-medium">Tiada aduan dalam peti masuk</p>
+      <p className="text-xs text-[var(--color-muted-foreground)]">
+        Aduan baharu dari Saluran Bersatu akan muncul di sini.
+      </p>
+    </div>
+  );
+}
+
 function TicketCard({
   ticket,
-  agencyId,
   onClick,
 }: {
   ticket: Ticket;
-  agencyId: string;
   onClick: () => void;
 }) {
   return (
-    <button type="button" className="w-full text-left" onClick={onClick}>
-      <Card className="hover:bg-[var(--color-accent)]">
+    <button type="button" className="w-full text-left md:hidden" onClick={onClick}>
+      <Card
+        className={cn(
+          "hover:bg-[var(--color-accent)]",
+          ticket.sla?.overdue && "border-red-200 bg-red-50/40"
+        )}
+      >
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between gap-2">
             <CardTitle className="text-base">{ticket.externalRef}</CardTitle>
@@ -104,7 +158,9 @@ function TicketCard({
               {ticket.sla?.overdue ? (
                 <Badge variant="destructive">Lewat SLA</Badge>
               ) : null}
-              <Badge>{STATUS_BM[ticket.status] || ticket.status}</Badge>
+              <Badge variant={statusBadgeVariant(ticket.status)}>
+                {STATUS_BM[ticket.status] || ticket.status}
+              </Badge>
             </div>
           </div>
         </CardHeader>
@@ -125,7 +181,6 @@ function TicketCard({
 export function AgencyOverviewPage() {
   const { agencyId = "" } = useParams();
   const theme = AGENCY_THEME[agencyId];
-  const layout = getAgencyLayout();
   const navigate = useNavigate();
   const [stats, setStats] = useState<{
     counts: Record<string, number>;
@@ -138,9 +193,11 @@ export function AgencyOverviewPage() {
     if (!theme) return;
     Promise.all([
       agencyApi<{ counts: Record<string, number>; overdue: number }>(
+        agencyId,
         `/api/agencies/${agencyId}/stats`
       ),
       agencyApi<{ items: Ticket[] }>(
+        agencyId,
         `/api/agencies/${agencyId}/tickets?status=received`
       ),
     ])
@@ -150,10 +207,6 @@ export function AgencyOverviewPage() {
       })
       .catch((e) => setError(e.message));
   }, [agencyId, theme]);
-
-  if (layout === "app") {
-    return <Navigate to={`/portals/${agencyId}/inbox`} replace />;
-  }
 
   if (!theme) return <p>Unknown agency</p>;
 
@@ -168,25 +221,26 @@ export function AgencyOverviewPage() {
           </Alert>
         ) : null}
         <div className="mb-6 grid gap-3 sm:grid-cols-2 lg:grid-cols-5">
-          {[
-            ["received", "Baharu"],
-            ["acknowledged", "Diakui"],
-            ["in_progress", "Dalam tindakan"],
-            ["resolved", "Selesai"],
-            ["rejected", "Ditolak"],
-          ].map(([k, label]) => (
-            <Card key={k}>
-              <CardContent className="p-4">
-                <p className="text-xs text-[var(--color-muted-foreground)]">
-                  {label}
-                </p>
-                <p className="text-2xl font-semibold">{c[k] ?? 0}</p>
-              </CardContent>
-            </Card>
+          {(
+            [
+              ["received", "Baharu"],
+              ["acknowledged", "Diakui"],
+              ["in_progress", "Dalam tindakan"],
+              ["resolved", "Selesai"],
+              ["rejected", "Ditolak"],
+            ] as const
+          ).map(([k, label]) => (
+            <KpiCard
+              key={k}
+              label={label}
+              value={c[k] ?? 0}
+              accent={theme.accent}
+              fill={theme.gradientFrom}
+            />
           ))}
         </div>
         {stats?.overdue ? (
-          <Alert className="mb-4">
+          <Alert className="mb-4 border-red-200 bg-red-50/50">
             <AlertDescription>
               {stats.overdue} aduan melepasi SLA — semak peti masuk.
             </AlertDescription>
@@ -198,15 +252,12 @@ export function AgencyOverviewPage() {
           </CardHeader>
           <CardContent className="space-y-3">
             {tickets.length === 0 ? (
-              <p className="text-sm text-[var(--color-muted-foreground)]">
-                Tiada aduan baharu.
-              </p>
+              <EmptyInbox />
             ) : (
               tickets.map((t) => (
                 <TicketCard
                   key={t.externalRef}
                   ticket={t}
-                  agencyId={agencyId}
                   onClick={() =>
                     navigate(`/portals/${agencyId}/${t.externalRef}`)
                   }
@@ -227,94 +278,21 @@ export function MockInboxPage() {
 export function AgencyInboxPage() {
   const { agencyId = "" } = useParams();
   const theme = AGENCY_THEME[agencyId];
-  const layout = getAgencyLayout();
   const navigate = useNavigate();
   const [items, setItems] = useState<Ticket[]>([]);
   const [error, setError] = useState("");
 
   useEffect(() => {
     if (!theme) return;
-    agencyApi<{ items: Ticket[] }>(`/api/agencies/${agencyId}/tickets`)
+    agencyApi<{ items: Ticket[] }>(
+      agencyId,
+      `/api/agencies/${agencyId}/tickets`
+    )
       .then((r) => setItems(r.items))
       .catch((e) => setError(e.message));
   }, [agencyId, theme]);
 
   if (!theme) return <p className="p-6">Unknown agency</p>;
-
-  const content =
-    layout === "dashboard" ? (
-      <Card>
-        <CardHeader>
-          <CardTitle>Peti masuk</CardTitle>
-        </CardHeader>
-        <CardContent className="overflow-x-auto p-0">
-          <Table>
-            <TableHeader>
-              <TableRow>
-                <TableHead>Rujukan</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead>Kategori</TableHead>
-                <TableHead>Lokasi</TableHead>
-                <TableHead>Tarikh</TableHead>
-              </TableRow>
-            </TableHeader>
-            <TableBody>
-              {items.map((t) => (
-                <TableRow
-                  key={t.externalRef}
-                  className="cursor-pointer"
-                  onClick={() =>
-                    navigate(`/portals/${agencyId}/${t.externalRef}`)
-                  }
-                >
-                  <TableCell className="font-medium">{t.externalRef}</TableCell>
-                  <TableCell>
-                    <div className="flex gap-1">
-                      {t.sla?.overdue ? (
-                        <Badge variant="destructive">SLA</Badge>
-                      ) : null}
-                      <Badge>{STATUS_BM[t.status] || t.status}</Badge>
-                    </div>
-                  </TableCell>
-                  <TableCell>
-                    {t.payload?.classification?.categoryLabel || "—"}
-                  </TableCell>
-                  <TableCell className="max-w-[200px] truncate">
-                    {t.payload?.location?.display_name || "—"}
-                  </TableCell>
-                  <TableCell className="text-xs">
-                    {t.createdAt
-                      ? new Date(t.createdAt).toLocaleString("ms-MY")
-                      : "—"}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          </Table>
-        </CardContent>
-      </Card>
-    ) : (
-      <div className="space-y-3">
-        {items.length === 0 ? (
-          <Card>
-            <CardContent className="p-5 text-sm text-[var(--color-muted-foreground)]">
-              Tiada tiket lagi.
-            </CardContent>
-          </Card>
-        ) : (
-          items.map((t) => (
-            <TicketCard
-              key={t.externalRef}
-              ticket={t}
-              agencyId={agencyId}
-              onClick={() =>
-                navigate(`/portals/${agencyId}/${t.externalRef}`)
-              }
-            />
-          ))
-        )}
-      </div>
-    );
 
   return (
     <RequireAgencyAuth>
@@ -324,7 +302,83 @@ export function AgencyInboxPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        {content}
+        <Card>
+          <CardHeader>
+            <CardTitle>Peti masuk</CardTitle>
+          </CardHeader>
+          <CardContent className="p-0 md:p-6 md:pt-0">
+            {items.length === 0 ? (
+              <EmptyInbox />
+            ) : (
+              <>
+                <div className="hidden overflow-x-auto md:block">
+                  <Table>
+                    <TableHeader>
+                      <TableRow>
+                        <TableHead>Rujukan</TableHead>
+                        <TableHead>Status</TableHead>
+                        <TableHead>Kategori</TableHead>
+                        <TableHead>Lokasi</TableHead>
+                        <TableHead>Tarikh</TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {items.map((t, i) => (
+                        <TableRow
+                          key={t.externalRef}
+                          className={cn(
+                            "cursor-pointer",
+                            i % 2 === 1 && "bg-[var(--color-muted)]/30",
+                            t.sla?.overdue && "bg-red-50/50"
+                          )}
+                          onClick={() =>
+                            navigate(`/portals/${agencyId}/${t.externalRef}`)
+                          }
+                        >
+                          <TableCell className="font-medium">
+                            {t.externalRef}
+                          </TableCell>
+                          <TableCell>
+                            <div className="flex gap-1">
+                              {t.sla?.overdue ? (
+                                <Badge variant="destructive">SLA</Badge>
+                              ) : null}
+                              <Badge variant={statusBadgeVariant(t.status)}>
+                                {STATUS_BM[t.status] || t.status}
+                              </Badge>
+                            </div>
+                          </TableCell>
+                          <TableCell>
+                            {t.payload?.classification?.categoryLabel || "—"}
+                          </TableCell>
+                          <TableCell className="max-w-[200px] truncate">
+                            {t.payload?.location?.display_name || "—"}
+                          </TableCell>
+                          <TableCell className="text-xs whitespace-nowrap">
+                            {t.createdAt
+                              ? new Date(t.createdAt).toLocaleString("ms-MY")
+                              : "—"}
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                </div>
+                <div className="space-y-3 p-4 md:hidden">
+                  {items.map((t) => (
+                    <TicketCard
+                      key={t.externalRef}
+                      ticket={t}
+                      onClick={() =>
+                        navigate(`/portals/${agencyId}/${t.externalRef}`)
+                      }
+                    />
+                  ))}
+                </div>
+              </>
+            )}
+          </CardContent>
+        </Card>
       </AgencyShell>
     </RequireAgencyAuth>
   );
@@ -337,7 +391,6 @@ export function MockTicketPage() {
 export function AgencyTicketPage() {
   const { agencyId = "", externalRef = "" } = useParams();
   const theme = AGENCY_THEME[agencyId];
-  const layout = getAgencyLayout();
   const [ticket, setTicket] = useState<Ticket | null>(null);
   const [caseRef, setCaseRef] = useState<string | null>(null);
   const [error, setError] = useState("");
@@ -348,7 +401,7 @@ export function AgencyTicketPage() {
     const res = await agencyApi<{
       ticket: Ticket;
       case?: { ref?: string };
-    }>(`/api/agencies/${agencyId}/tickets/${externalRef}`);
+    }>(agencyId, `/api/agencies/${agencyId}/tickets/${externalRef}`);
     setTicket(res.ticket);
     setCaseRef(res.case?.ref || res.ticket.caseRef || null);
   }
@@ -362,6 +415,7 @@ export function AgencyTicketPage() {
     setBusy(true);
     try {
       const res = await agencyApi<{ ticket: Ticket }>(
+        agencyId,
         `/api/agencies/${agencyId}/tickets/${externalRef}/status`,
         {
           method: "PATCH",
@@ -457,7 +511,7 @@ export function AgencyTicketPage() {
         <CardTitle>Status & tindakan</CardTitle>
       </CardHeader>
       <CardContent className="space-y-4">
-        <Badge className="text-sm">
+        <Badge variant={statusBadgeVariant(ticket.status)} className="text-sm">
           {STATUS_BM[ticket.status] || ticket.status}
         </Badge>
         <StatusTimeline
@@ -511,17 +565,10 @@ export function AgencyTicketPage() {
             <AlertDescription>{error}</AlertDescription>
           </Alert>
         ) : null}
-        {layout === "dashboard" ? (
-          <div className="grid gap-4 lg:grid-cols-2">
-            {infoBlock}
-            {workflowBlock}
-          </div>
-        ) : (
-          <div className="space-y-4">
-            {infoBlock}
-            {workflowBlock}
-          </div>
-        )}
+        <div className="grid gap-4 lg:grid-cols-2">
+          {infoBlock}
+          {workflowBlock}
+        </div>
       </AgencyShell>
     </RequireAgencyAuth>
   );
