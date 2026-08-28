@@ -4,6 +4,7 @@ import { AGENCY_THEME } from "@/lib/api";
 import {
   clearAgencyToken,
   getSessionClaims,
+  hasAdminSession,
   isAdminClaims,
 } from "@/lib/agencyAuth";
 import { useState } from "react";
@@ -20,7 +21,7 @@ export function AgencyShell({ children }: { children: React.ReactNode }) {
 
   const claims = getSessionClaims(agencyId);
   const username = claims?.sub || "Pengguna";
-  const showAdminLink = isAdminClaims(claims);
+  const showAdminLink = isAdminClaims(claims) || hasAdminSession();
 
   function logout() {
     clearAgencyToken(agencyId);

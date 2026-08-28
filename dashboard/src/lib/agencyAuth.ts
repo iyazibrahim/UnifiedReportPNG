@@ -53,6 +53,16 @@ export function isAdminClaims(claims: JwtClaims | null) {
   return claims?.role ? ADMIN_ROLES.has(claims.role) : false;
 }
 
+/** True when a separate admin dashboard JWT is still in storage. */
+export function hasAdminSession() {
+  const admin = getToken();
+  if (!admin) return false;
+  const claims = decodeJwtPayload(admin);
+  if (!claims?.sub) return false;
+  if (claims.exp && claims.exp < Math.floor(Date.now() / 1000)) return false;
+  return isAdminClaims(claims);
+}
+
 export function tokenValidForAgency(token: string, agencyId: string) {
   const claims = decodeJwtPayload(token);
   if (!claims?.sub) return false;

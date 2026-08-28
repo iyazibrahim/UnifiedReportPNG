@@ -10,6 +10,7 @@ import { Button } from "@/components/ui/button";
 import { clearToken } from "@/lib/api";
 import { cn } from "@/lib/utils";
 import { CaseEventsHost } from "@/components/CaseEventsHost";
+import { OnePenangLogo } from "@/components/OnePenangLogo";
 
 const links = [
   { to: "/admin", label: "Overview", icon: LayoutDashboard, end: true },
@@ -30,12 +31,15 @@ export function AdminLayout() {
       <div className="flex h-dvh flex-col overflow-hidden md:grid md:grid-cols-[240px_1fr]">
         <aside className="flex shrink-0 flex-col overflow-hidden border-b border-[var(--color-border)] bg-[var(--color-card)] text-[var(--color-foreground)] md:h-full md:border-b-0 md:border-r">
           <div className="flex items-start justify-between gap-3 p-5">
-            <div>
-              <div className="text-xs font-medium tracking-[0.14em] text-[var(--color-muted-foreground)] uppercase">
-                OnePenang
-              </div>
-              <div className="mt-1 text-lg font-semibold text-[var(--color-navy)]">
-                Dashboard
+            <div className="flex items-center gap-3">
+              <OnePenangLogo className="size-11 shrink-0 rounded-lg shadow-sm" />
+              <div>
+                <div className="text-xs font-medium tracking-[0.14em] text-[var(--color-muted-foreground)] uppercase">
+                  OnePenang
+                </div>
+                <div className="mt-1 text-lg font-semibold text-[var(--color-navy)]">
+                  Dashboard
+                </div>
               </div>
             </div>
             <Button

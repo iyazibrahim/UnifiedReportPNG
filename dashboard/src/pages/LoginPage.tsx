@@ -8,6 +8,7 @@ import { Input, Label } from "@/components/ui/misc";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+import { OnePenangLogo } from "@/components/OnePenangLogo";
 
 const ADMIN_THEME = {
   accent: "oklch(0.52 0.14 235)",
@@ -73,9 +74,7 @@ function LoginCarousel({
       <div className="absolute inset-0 bg-[oklch(0.22_0.04_240/0.52)]" />
       <div className="relative z-10 flex flex-1 flex-col justify-between p-6 md:p-10">
         <div>
-          <div className="mb-6 flex size-16 items-center justify-center rounded-xl bg-white p-2 text-xl font-bold tracking-tight text-[var(--color-primary)] shadow-md">
-            1P
-          </div>
+          <OnePenangLogo className="mb-6 size-16 rounded-xl shadow-md" />
           <p className="text-xs uppercase tracking-widest text-white/80">
             Pentadbiran
           </p>
