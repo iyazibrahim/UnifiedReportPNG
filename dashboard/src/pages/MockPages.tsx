@@ -108,7 +108,7 @@ export function MockInboxPage() {
         theme={theme}
         agencyId={agencyId}
         title={theme.label}
-        subtitle="Tickets routed from Unified Report Penang"
+        subtitle="Tickets routed from OnePenang Dashboard"
       />
 
       <main className="space-y-3 p-4">

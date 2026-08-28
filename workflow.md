@@ -1,4 +1,4 @@
-# Unified Report Penang — workflow
+# OnePenang Dashboard — workflow
 
 ## Status
 
@@ -37,6 +37,9 @@ Admin dashboard + agency portals on a multi-channel intake platform (Telegram + 
 - [x] Admin shell: fixed sidebar, Log out pinned at footer, only main content scrolls
 - [x] Production wording: remove MVP/mock/demo/simulasi from user-facing copy
 - [x] Multi-channel identity + shared intake engine + WhatsApp Cloud API adapter
+- [x] Penang flag palette: sky blue primary, gold accents, palm green success; light civic UI
+- [x] Login page: split-screen layout with carousel, password toggle, flag stripe edge
+- [x] Rebrand dashboard UI to **OnePenang Dashboard** (login, sidebar, title, agency portals)
 
 ## How to run
 

@@ -17,7 +17,7 @@ export function AgencyFlow({
     id,
     label: AGENCY_THEME[id]?.short || id,
     count: byAgency[id] || 0,
-    color: AGENCY_THEME[id]?.accent || "#1c4b3a",
+    color: AGENCY_THEME[id]?.accent || "oklch(0.52 0.14 235)",
   }));
 
   const w = 640;
@@ -73,10 +73,10 @@ export function AgencyFlow({
           cx={source.x}
           cy={source.y}
           r={20}
-          fill="#1c4b3a"
+          fill="oklch(0.52 0.14 235)"
           className="urp-pulse"
         />
-        <circle cx={source.x} cy={source.y} r={14} fill="#1c4b3a" />
+        <circle cx={source.x} cy={source.y} r={14} fill="oklch(0.22 0.04 240)" />
         <text
           x={source.x}
           y={source.y + 4}

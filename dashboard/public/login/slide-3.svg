@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="harbour" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1a2840"/>
+      <stop offset="50%" stop-color="#2a4060"/>
+      <stop offset="100%" stop-color="#152030"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#harbour)"/>
+  <!-- Komtar tower -->
+  <rect x="360" y="120" width="80" height="420" fill="#1e3048"/>
+  <rect x="370" y="140" width="60" height="8" fill="#3a5a7a" opacity="0.5"/>
+  <rect x="370" y="180" width="60" height="8" fill="#3a5a7a" opacity="0.5"/>
+  <rect x="370" y="220" width="60" height="8" fill="#3a5a7a" opacity="0.5"/>
+  <rect x="370" y="260" width="60" height="8" fill="#3a5a7a" opacity="0.5"/>
+  <rect x="370" y="300" width="60" height="8" fill="#3a5a7a" opacity="0.5"/>
+  <!-- harbour water -->
+  <rect y="560" width="800" height="440" fill="#1a3048"/>
+  <!-- boats -->
+  <ellipse cx="200" cy="700" rx="60" ry="12" fill="#2a4a6a" opacity="0.7"/>
+  <ellipse cx="580" cy="750" rx="80" ry="14" fill="#2a4a6a" opacity="0.6"/>
+  <!-- skyline -->
+  <rect x="60" y="480" width="80" height="80" fill="#1e2835"/>
+  <rect x="160" y="440" width="60" height="120" fill="#222d3a"/>
+  <rect x="500" y="460" width="70" height="100" fill="#1e2835"/>
+  <rect x="600" y="500" width="90" height="60" fill="#252f3c"/>
+</svg>

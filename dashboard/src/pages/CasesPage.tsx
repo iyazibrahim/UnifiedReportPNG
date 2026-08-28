@@ -39,9 +39,9 @@ type Stats = {
 };
 
 const STATUS_COLORS = {
-  open: "#40916c",
-  in_progress: "#d4a017",
-  closed: "#1c4b3a",
+  open: "oklch(0.52 0.14 235)",
+  in_progress: "oklch(0.72 0.14 85)",
+  closed: "oklch(0.42 0.1 155)",
 };
 
 export function OverviewPage() {

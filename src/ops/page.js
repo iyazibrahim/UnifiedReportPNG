@@ -47,7 +47,7 @@ export function renderOpsPage(cases) {
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>Unified Report Penang — Ops</title>
+  <title>OnePenang Dashboard — Ops</title>
   <style>
     :root { font-family: "IBM Plex Sans", "Segoe UI", sans-serif; background: #eef3ef; color: #1c2b22; }
     body { margin: 0; }
@@ -64,7 +64,7 @@ export function renderOpsPage(cases) {
 </head>
 <body>
   <header>
-    <h1>Unified Report Penang</h1>
+    <h1>OnePenang Dashboard</h1>
     <p>Senarai kes — routing ke Pearl / Aspire / MyJalan / PBAPP / ePINTAS</p>
   </header>
   <main>

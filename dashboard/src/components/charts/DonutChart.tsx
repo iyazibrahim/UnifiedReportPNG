@@ -1,13 +1,13 @@
 type Slice = { label: string; value: number; color: string };
 
 const DEFAULT_COLORS = [
-  "#1c4b3a",
-  "#2d6a4f",
-  "#40916c",
-  "#52b788",
-  "#74c69d",
-  "#95d5b2",
-  "#b7e4c7",
+  "oklch(0.22 0.04 240)",
+  "oklch(0.52 0.14 235)",
+  "oklch(0.72 0.14 85)",
+  "oklch(0.78 0.06 230)",
+  "oklch(0.62 0.08 235)",
+  "oklch(0.88 0.04 230)",
+  "oklch(0.42 0.1 155)",
 ];
 
 export function DonutChart({

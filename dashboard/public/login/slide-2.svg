@@ -1,0 +1,26 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 800 1000" preserveAspectRatio="xMidYMid slice">
+  <defs>
+    <linearGradient id="dusk" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#1c2f4a"/>
+      <stop offset="60%" stop-color="#2d4a6a"/>
+      <stop offset="100%" stop-color="#1a2535"/>
+    </linearGradient>
+  </defs>
+  <rect width="800" height="1000" fill="url(#dusk)"/>
+  <!-- water -->
+  <rect y="620" width="800" height="380" fill="#1a3048"/>
+  <!-- bridge cables -->
+  <line x1="100" y1="480" x2="400" y2="320" stroke="#4a6a8a" stroke-width="2" opacity="0.6"/>
+  <line x1="200" y1="500" x2="400" y2="320" stroke="#4a6a8a" stroke-width="2" opacity="0.5"/>
+  <line x1="300" y1="510" x2="400" y2="320" stroke="#4a6a8a" stroke-width="2" opacity="0.5"/>
+  <line x1="500" y1="510" x2="400" y2="320" stroke="#4a6a8a" stroke-width="2" opacity="0.5"/>
+  <line x1="600" y1="500" x2="400" y2="320" stroke="#4a6a8a" stroke-width="2" opacity="0.5"/>
+  <line x1="700" y1="480" x2="400" y2="320" stroke="#4a6a8a" stroke-width="2" opacity="0.6"/>
+  <!-- deck -->
+  <rect x="80" y="500" width="640" height="12" rx="2" fill="#3a5a7a" opacity="0.8"/>
+  <!-- towers -->
+  <rect x="360" y="280" width="24" height="240" fill="#2a4a6a"/>
+  <rect x="416" y="280" width="24" height="240" fill="#2a4a6a"/>
+  <!-- reflection -->
+  <rect y="640" width="800" height="4" fill="#5a8ab0" opacity="0.15"/>
+</svg>
