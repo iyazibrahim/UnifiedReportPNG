@@ -5,8 +5,13 @@ import { toast } from "sonner";
 import { api, setToken } from "@/lib/api";
 import { Button } from "@/components/ui/button";
 import { Input, Label } from "@/components/ui/misc";
+import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Alert, AlertDescription } from "@/components/ui/alert";
 import { cn } from "@/lib/utils";
+
+const ADMIN_THEME = {
+  accent: "oklch(0.52 0.14 235)",
+};
 
 const SLIDES = [
   {
@@ -53,7 +58,7 @@ function LoginCarousel({
   }, [paused, onSelect]);
 
   return (
-    <div className="relative flex min-h-[200px] flex-1 flex-col overflow-hidden md:min-h-0">
+    <div className="relative flex min-h-[220px] flex-1 flex-col overflow-hidden md:min-h-screen">
       {SLIDES.map((s, i) => (
         <div
           key={s.image}
@@ -65,21 +70,24 @@ function LoginCarousel({
           aria-hidden={i !== slide}
         />
       ))}
-      <div className="absolute inset-0 bg-[oklch(0.22_0.04_240/0.42)]" />
-      <div className="relative z-10 flex flex-1 flex-col p-6 md:p-8">
-        <div className="flex items-center gap-2">
-          <div className="flex h-9 w-9 items-center justify-center rounded-md bg-white/15 text-sm font-bold tracking-tight text-white backdrop-blur-sm">
+      <div className="absolute inset-0 bg-[oklch(0.22_0.04_240/0.52)]" />
+      <div className="relative z-10 flex flex-1 flex-col justify-between p-6 md:p-10">
+        <div>
+          <div className="mb-6 flex size-16 items-center justify-center rounded-xl bg-white p-2 text-xl font-bold tracking-tight text-[var(--color-primary)] shadow-md">
             1P
           </div>
-          <span className="text-sm font-medium text-white/90">
+          <p className="text-xs uppercase tracking-widest text-white/80">
+            Pentadbiran
+          </p>
+          <h1 className="mt-2 font-serif-display text-2xl font-semibold text-white md:text-3xl">
             OnePenang Dashboard
-          </span>
+          </h1>
         </div>
-        <div className="mt-auto">
-          <p className="font-serif-display max-w-xs text-2xl leading-snug font-semibold text-white md:text-3xl">
+        <div>
+          <p className="max-w-md font-serif-display text-xl font-semibold leading-snug text-white md:text-2xl">
             {SLIDES[slide].tagline}
           </p>
-          <div className="mt-6 flex gap-2">
+          <div className="mt-5 flex gap-2">
             {SLIDES.map((_, i) => (
               <button
                 key={i}
@@ -98,6 +106,9 @@ function LoginCarousel({
               />
             ))}
           </div>
+          <p className="mt-6 text-xs text-white/60">
+            Saluran Aduan Bersatu Pulau Pinang
+          </p>
         </div>
       </div>
     </div>
@@ -137,57 +148,45 @@ export function LoginPage() {
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-[var(--color-background)] p-4 md:p-8">
+    <div className="flex min-h-screen flex-col md:flex-row">
       <div
-        className="relative flex w-full max-w-5xl overflow-hidden rounded-2xl bg-[var(--color-card)] shadow-[0_8px_40px_oklch(0.22_0.04_240/0.08)] before:absolute before:top-0 before:left-0 before:z-20 before:h-full before:w-[6px] before:bg-[var(--color-primary)] after:absolute after:top-0 after:left-[6px] after:z-20 after:h-full after:w-1 after:bg-[var(--color-gold)]"
+        className="flex flex-1 flex-col"
+        onMouseEnter={() => setCarouselPaused(true)}
+        onMouseLeave={() => setCarouselPaused(false)}
       >
-        <div
-          className="hidden w-[45%] shrink-0 md:flex md:flex-col"
-          onMouseEnter={() => setCarouselPaused(true)}
-          onMouseLeave={() => setCarouselPaused(false)}
-        >
-          <LoginCarousel
-            active={activeSlide}
-            onSelect={setActiveSlide}
-            paused={carouselPaused}
-          />
-        </div>
+        <LoginCarousel
+          active={activeSlide}
+          onSelect={setActiveSlide}
+          paused={carouselPaused}
+        />
+      </div>
 
-        <div className="flex w-full flex-col md:w-[55%]">
-          <div
-            className="relative min-h-[160px] md:hidden"
-            onMouseEnter={() => setCarouselPaused(true)}
-            onMouseLeave={() => setCarouselPaused(false)}
-          >
-            <LoginCarousel
-              active={activeSlide}
-              onSelect={setActiveSlide}
-              paused={carouselPaused}
-            />
-          </div>
-
-          <div className="flex flex-1 flex-col justify-center px-6 py-8 md:px-10 md:py-12">
-            <div className="mb-8">
-              <h1 className="text-2xl font-semibold tracking-tight text-[var(--color-foreground)]">
-                Sign in
-              </h1>
-              <p className="mt-2 text-sm text-[var(--color-muted-foreground)]">
-                OnePenang Dashboard — coordinate public reports and agency operations
-              </p>
-            </div>
-
-            <form className="flex flex-col gap-5" onSubmit={onSubmit}>
-              <div className="flex flex-col gap-2">
+      <div className="flex flex-1 items-center justify-center bg-[var(--color-background)] p-6 md:p-10">
+        <Card className="w-full max-w-md border-[var(--color-border)] shadow-lg">
+          <CardHeader>
+            <CardTitle>Sign in</CardTitle>
+            <p className="text-sm text-[var(--color-muted-foreground)]">
+              Access the operations dashboard and agency coordination tools.
+            </p>
+          </CardHeader>
+          <CardContent>
+            <form className="space-y-4" onSubmit={onSubmit}>
+              {error ? (
+                <Alert variant="destructive">
+                  <AlertDescription>{error}</AlertDescription>
+                </Alert>
+              ) : null}
+              <div className="space-y-2">
                 <Label htmlFor="user">Username</Label>
                 <Input
                   id="user"
                   value={username}
                   onChange={(e) => setUsername(e.target.value)}
                   autoComplete="username"
-                  className="min-h-11 rounded-lg border-[var(--color-input)] bg-[var(--color-muted)]/40"
+                  className="min-h-11"
                 />
               </div>
-              <div className="flex flex-col gap-2">
+              <div className="space-y-2">
                 <Label htmlFor="pass">Password</Label>
                 <div className="relative">
                   <Input
@@ -196,12 +195,12 @@ export function LoginPage() {
                     value={password}
                     onChange={(e) => setPassword(e.target.value)}
                     autoComplete="current-password"
-                    className="min-h-11 rounded-lg border-[var(--color-input)] bg-[var(--color-muted)]/40 pr-11"
+                    className="min-h-11 pr-10"
                   />
                   <button
                     type="button"
+                    className="absolute right-2 top-1/2 -translate-y-1/2 rounded p-1 text-[var(--color-muted-foreground)]"
                     onClick={() => setShowPassword((v) => !v)}
-                    className="absolute top-1/2 right-3 -translate-y-1/2 text-[var(--color-muted-foreground)] hover:text-[var(--color-foreground)]"
                     aria-label={showPassword ? "Hide password" : "Show password"}
                   >
                     {showPassword ? (
@@ -212,21 +211,17 @@ export function LoginPage() {
                   </button>
                 </div>
               </div>
-              {error ? (
-                <Alert variant="destructive">
-                  <AlertDescription>{error}</AlertDescription>
-                </Alert>
-              ) : null}
               <Button
                 type="submit"
-                className="min-h-11 w-full rounded-lg text-base"
+                className="min-h-11 w-full"
                 disabled={loading}
+                style={{ background: ADMIN_THEME.accent }}
               >
                 {loading ? "Signing in…" : "Sign in"}
               </Button>
             </form>
-          </div>
-        </div>
+          </CardContent>
+        </Card>
       </div>
     </div>
   );
