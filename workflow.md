@@ -40,6 +40,7 @@ Admin dashboard + agency portals on a multi-channel intake platform (Telegram + 
 - [x] Penang flag palette: sky blue primary, gold accents, palm green success; light civic UI
 - [x] Login page: split-screen layout with carousel, password toggle, flag stripe edge
 - [x] Rebrand dashboard UI to **OnePenang Dashboard** (login, sidebar, title, agency portals)
+- [x] Location accuracy: fuzzy-match fix (no locality-only false positives), LLM POI/locality anchor extraction, disambiguation picker, Nominatim POI ranking, TF Mart + fuel/convenience seed expansion
 
 ## Production readiness (2026-08-28)
 
@@ -85,13 +86,13 @@ npm run seed:landmarks:expand
 
 Compose: `mongo` + `app` (dashboard baked into image via Dockerfile).
 
-Landmark resolve order: local Mongo DB → LLM/Nominatim. No admin CRUD — refresh with seed script only.
+Landmark resolve order: LLM anchor extract → local Mongo DB (POI + locality scoped) → Nominatim (POI-ranked). Disambiguation buttons when confidence low. No admin CRUD — refresh with seed script only.
 
 Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins rejected in bot.
 
 ## Validation
 
-- `npm test` — 89 unit tests (incl. password helpers, landmark DB, WhatsApp webhook)
+- `npm test` — 92 unit tests (incl. password helpers, landmark DB, geocode ranking, WhatsApp webhook)
 - `npm run build:dashboard` — Vite production build OK
 
 ## Landmark coordinate fixes (2026-08-27)
@@ -113,3 +114,13 @@ Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins r
 - WhatsApp Cloud API: Settings credentials → webhook verify + inbound messages + status notify
 - Durable photo storage under `data/media/` for WhatsApp (and optional Telegram download)
 - User-facing copy no longer says MVP / mock / simulasi
+
+## Location accuracy (2026-09-02)
+
+- Fixed fuzzy matcher: `"TF Mart Balik Pulau"` no longer matches `"Balik Pulau Town"` alias via substring
+- LLM now extracts `poiName` + `locality` before DB/Nominatim lookup
+- Low-confidence or ambiguous results show 2–3 pick buttons (`awaiting_place_pick`)
+- Nominatim forward geocode deprioritizes administrative/place centroids when query has POI tokens
+- Curated `TF Mart Balik Pulau` added to seed; expand script includes fuel stations + convenience brands
+- Bot copy teaches `[Nama kedai] [kawasan]` format + WhatsApp GPS share guide
+- Validation: `npm test` — 92 pass

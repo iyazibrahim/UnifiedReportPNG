@@ -1,7 +1,7 @@
 import { classifyReport } from "../classify/classify.js";
 import { resolveJurisdiction } from "../jurisdiction/resolver.js";
 import { reverseGeocode } from "../location/geocode.js";
-import { resolveCitizenPlace } from "../location/resolveLandmark.js";
+import { resolveCitizenPlaceWithOptions } from "../location/resolveLandmark.js";
 import { isAllowedPenangLocation } from "../jurisdiction/boundary.js";
 import { locateDaerah, daerahLabel } from "../jurisdiction/daerah.js";
 import {
@@ -44,6 +44,7 @@ import {
   photoContinueButtons,
   confirmButtons,
   textPlaceConfirmButtons,
+  placePickButtons,
   submitButtons,
 } from "./buttons.js";
 
@@ -199,24 +200,11 @@ async function ingestLocation(reply, session, config, locMsg, channel) {
   return true;
 }
 
-async function resolveTextPlace(reply, session, config, placeText) {
-  await reply.sendText(MSG.locatingPlace);
-  const hit = await resolveCitizenPlace(placeText, {
-    apiKey: config.openRouterKey,
-    model: config.openRouterModel,
-    userAgent: config.nominatimUserAgent,
-  });
-  if (!hit || !Number.isFinite(hit.lat) || !Number.isFinite(hit.lng)) {
-    session.draft.geocodeFails = (session.draft.geocodeFails || 0) + 1;
-    session.step = "awaiting_location";
-    await saveSession(session);
-    await reply.sendText(MSG.placeNotFound, { keyboard: "location" });
-    return;
-  }
+async function applyResolvedPlace(reply, session, placeText, hit) {
   const gate = isAllowedPenangLocation(hit.lat, hit.lng);
   if (!gate.allowed) {
     await rejectOutsidePenang(reply, session);
-    return;
+    return false;
   }
   const source =
     hit.method === "landmark_db"
@@ -239,6 +227,7 @@ async function resolveTextPlace(reply, session, config, placeText) {
     city: hit.city,
   });
   session.draft.location = labeled;
+  session.draft.placeCandidates = null;
   session.draft.geocodeFails = 0;
   session.draft.forceTriage = false;
   session.step = "awaiting_confirm";
@@ -250,6 +239,35 @@ async function resolveTextPlace(reply, session, config, placeText) {
     `${MSG.placeConfirmHint}\n\n${formatConfirmMessage(labeled)}`,
     textPlaceConfirmButtons()
   );
+  return true;
+}
+
+async function resolveTextPlace(reply, session, config, placeText) {
+  await reply.sendText(MSG.locatingPlace);
+  const result = await resolveCitizenPlaceWithOptions(placeText, {
+    apiKey: config.openRouterKey,
+    model: config.openRouterModel,
+    userAgent: config.nominatimUserAgent,
+  });
+  if (!result.best || !Number.isFinite(result.best.lat) || !Number.isFinite(result.best.lng)) {
+    session.draft.geocodeFails = (session.draft.geocodeFails || 0) + 1;
+    session.step = "awaiting_location";
+    await saveSession(session);
+    await reply.sendText(MSG.placeNotFound, { keyboard: "location" });
+    return;
+  }
+  if (result.needsDisambiguation && result.candidates.length > 1) {
+    session.draft.placeCandidates = result.candidates;
+    session.draft.pendingPlaceText = placeText;
+    session.step = "awaiting_place_pick";
+    await saveSession(session);
+    if (reply.sendLocation) {
+      await reply.sendLocation(result.best.lat, result.best.lng);
+    }
+    await reply.sendButtons(MSG.placeDisambiguation, placePickButtons(result.candidates));
+    return;
+  }
+  await applyResolvedPlace(reply, session, placeText, result.best);
 }
 
 async function handleButton(event, session, reply, config, gateway) {
@@ -286,13 +304,29 @@ async function handleButton(event, session, reply, config, gateway) {
     return;
   }
 
-  if (id === BUTTON.LOC_NO || id === BUTTON.LOC_RETRY_TEXT) {
+  if (id === BUTTON.LOC_NO || id === BUTTON.LOC_RETRY_TEXT || id === BUTTON.LOC_PICK_RETRY) {
     session.draft.location = null;
+    session.draft.placeCandidates = null;
+    session.draft.pendingPlaceText = null;
     session.draft.forceTriage = false;
     session.step = "awaiting_location";
     await saveSession(session);
     await reply.answerCallback?.();
     await askLocation(reply);
+    return;
+  }
+
+  if (id.startsWith(BUTTON.LOC_PICK_PREFIX)) {
+    const idx = Number(id.slice(BUTTON.LOC_PICK_PREFIX.length));
+    const candidates = session.draft.placeCandidates || [];
+    const hit = candidates[idx];
+    const placeText = session.draft.pendingPlaceText || session.draft.text || "";
+    if (!hit || !Number.isFinite(idx)) {
+      await reply.answerCallback?.({ text: "Pilihan tidak sah" });
+      return;
+    }
+    await reply.answerCallback?.();
+    await applyResolvedPlace(reply, session, placeText, hit);
     return;
   }
 

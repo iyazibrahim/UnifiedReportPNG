@@ -16,6 +16,8 @@ export const BUTTON = {
   LOC_YES_LANDMARK: "loc_yes_landmark",
   LOC_RETRY_TEXT: "loc_retry_text",
   LOC_UNCERTAIN: "loc_uncertain",
+  LOC_PICK_PREFIX: "loc_pick_",
+  LOC_PICK_RETRY: "loc_pick_retry",
   SUBMIT_YES: "submit_yes",
   SUBMIT_CANCEL: "submit_cancel",
 };
@@ -52,6 +54,16 @@ export function submitButtons() {
     { id: BUTTON.SUBMIT_YES, label: "Hantar aduan" },
     { id: BUTTON.SUBMIT_CANCEL, label: "Batalkan aduan ini" },
   ];
+}
+
+/** Build pick buttons for place disambiguation (max 3 options). */
+export function placePickButtons(candidates) {
+  const buttons = (candidates || []).slice(0, 3).map((c, i) => ({
+    id: `${BUTTON.LOC_PICK_PREFIX}${i}`,
+    label: (c.placeName || c.display_name || `Pilihan ${i + 1}`).slice(0, 60),
+  }));
+  buttons.push({ id: BUTTON.LOC_PICK_RETRY, label: "Cuba lokasi lain" });
+  return buttons;
 }
 
 export function mainMenuButtons() {

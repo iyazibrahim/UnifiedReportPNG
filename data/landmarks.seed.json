@@ -1655,6 +1655,23 @@
     "address": "Balik Pulau, Barat Daya, Pulau Pinang"
   },
   {
+    "name": "TF Mart Balik Pulau",
+    "aliases": [
+      "tf mart balik pulau",
+      "tf value mart balik pulau",
+      "tf mart"
+    ],
+    "category": "supermarket",
+    "lat": 5.3507,
+    "lng": 100.2378,
+    "daerah": "barat_daya",
+    "side": "pulau",
+    "source": "curated",
+    "osmId": null,
+    "googlePlaceId": null,
+    "address": "Jalan Balik Pulau, Balik Pulau, Barat Daya, Pulau Pinang"
+  },
+  {
     "name": "Bandar Baru",
     "aliases": [],
     "category": "supermarket",

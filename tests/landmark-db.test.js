@@ -80,6 +80,20 @@ describe("matchLandmarkList", () => {
     const lm = seed.find((x) => /Sungai Rusa/i.test(x.name));
     assert.ok(scoreLandmarkMatch("masjid jamek sungai rusa", lm) >= 0.9);
   });
+
+  it("matches TF Mart Balik Pulau and not Balik Pulau Town", () => {
+    const hit = matchLandmarkList("TF Mart Balik Pulau", seed);
+    assert.ok(hit);
+    assert.match(hit.landmark.name, /TF Mart/i);
+    assert.equal(hit.landmark.daerah, "barat_daya");
+    assert.doesNotMatch(hit.landmark.name, /Balik Pulau Town/i);
+  });
+
+  it("still matches Balik Pulau when user only names the town", () => {
+    const hit = matchLandmarkList("Balik Pulau", seed);
+    assert.ok(hit);
+    assert.match(hit.landmark.name, /Balik Pulau/i);
+  });
 });
 
 describe("landmarks seed fixture", () => {

@@ -8,6 +8,8 @@ export function emptyDraft() {
     jurisdiction: null,
     geocodeFails: 0,
     forceTriage: false,
+    placeCandidates: null,
+    pendingPlaceText: null,
   };
 }
 
@@ -108,7 +110,15 @@ export const MSG = {
     "1. Tekan *Kongsi lokasi GPS*, atau",
     "2. Taip mercu tanda / tempat berdekatan.",
     "",
-    "Contoh: Padang Kota · Jetty Butterworth · TM Butterworth · Nasi kandar Kepala Batas · depan 7-Eleven Komtar",
+    "Format terbaik: *[Nama kedai/tempat] [kawasan]*",
+    "✓ TF Mart Balik Pulau",
+    "✓ 99 Speedmart Sungai Dua",
+    "✓ Masjid Jamek Sungai Rusa",
+    "✗ Balik Pulau sahaja (terlalu umum)",
+    "",
+    "Contoh lain: Padang Kota · Jetty Butterworth · depan 7-Eleven Komtar",
+    "",
+    "Untuk WhatsApp: lampir → Lokasi → kongsi pin semasa anda berada di tempat kejadian.",
     "",
     "Anda tidak perlu membuka atau menyeret peta — taip nama tempat sahaja jika lebih mudah.",
     "Tekan *Kembali ke menu* untuk batalkan aduan ini.",
@@ -118,7 +128,12 @@ export const MSG = {
 
   placeNotFound: [
     "Maaf, lokasi tersebut tidak dijumpai dengan tepat.",
-    "Sila taip mercu tanda lain yang lebih jelas, atau tekan *Kongsi lokasi GPS*.",
+    "Sila taip mercu tanda lain yang lebih jelas (contoh: TF Mart Balik Pulau), atau tekan *Kongsi lokasi GPS*.",
+  ].join("\n"),
+
+  placeDisambiguation: [
+    "Kami jumpa beberapa lokasi berdekatan. Pilih yang betul:",
+    "(Pin di atas ialah anggaran terdekat — pilih nama yang sepadan.)",
   ].join("\n"),
 
   outsidePenang: [
@@ -153,7 +168,7 @@ export const MSG = {
 
   needLocation: [
     "Sila kongsi lokasi GPS, atau taip mercu tanda berdekatan.",
-    "Contoh: Padang Kota / Jetty Butterworth / depan 7-Eleven Komtar",
+    "Format: [Nama kedai] [kawasan] — contoh: TF Mart Balik Pulau / 99 Speedmart Sungai Dua",
   ].join("\n"),
 
   rateLimited: "Had penghantaran dicapai. Sila cuba lagi kemudian.",
