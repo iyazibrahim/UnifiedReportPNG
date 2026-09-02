@@ -10,6 +10,9 @@ export function emptyDraft() {
     forceTriage: false,
     placeCandidates: null,
     pendingPlaceText: null,
+    pendingStreetCandidates: null,
+    pendingStreetRaw: null,
+    pendingStreetBest: null,
   };
 }
 
@@ -172,6 +175,40 @@ export const MSG = {
   ].join("\n"),
 
   rateLimited: "Had penghantaran dicapai. Sila cuba lagi kemudian.",
+
+  streetGpsConfirm: (road) =>
+    [
+      `Kami mengesan nama jalan berhampiran pin anda:`,
+      `*${road}*`,
+      "",
+      "Adakah nama jalan ini betul?",
+    ].join("\n"),
+
+  askStreetKnow: [
+    "Adakah anda tahu nama jalan di lokasi ini?",
+    "Ini membantu agensi mencari tempat kejadian dengan lebih tepat.",
+  ].join("\n"),
+
+  askStreetInput: [
+    "Sila taip nama jalan.",
+    "Contoh: Jalan Burma / Lebuh Pantai / Jalan Balik Pulau",
+  ].join("\n"),
+
+  streetVerifying: "Sedang menyemak nama jalan…",
+
+  streetPropose: (street) =>
+    [
+      `Adakah ini jalan yang betul?`,
+      `*${street}*`,
+    ].join("\n"),
+
+  streetNoMatch: (raw) =>
+    [
+      `Kami tidak jumpa padanan tepat untuk "${raw}".`,
+      "Anda boleh guna teks anda atau pilih cadangan di bawah.",
+    ].join("\n"),
+
+  streetPickOther: "Pilih jalan yang betul:",
 };
 
 export function formatConfirmMessage(location) {
@@ -207,21 +244,26 @@ export function formatConfirmMessage(location) {
 export function previewMessage(draft) {
   const j = draft.jurisdiction;
   const c = draft.classification;
+  const loc = draft.location || {};
   const triage = j.needsTriage
     ? "\n\nNota: Aduan ini ditanda untuk triaj lanjut oleh pihak negeri."
     : "";
+  const streetLine = loc.road
+    ? `Nama jalan: ${loc.road}`
+    : null;
   return [
     "Ringkasan aduan anda:",
     "",
     `Kategori: ${c.categoryLabel}`,
     `Agensi dicadangkan: ${j.agencyLabel}`,
+    streetLine,
     `Sebab penyaluran: ${j.reason}`,
     triage,
     "",
     "Sila tekan *Hantar* untuk mengemukakan aduan,",
     "atau *Batal* untuk membatalkan aduan ini.",
   ]
-    .filter((line) => line !== undefined)
+    .filter((line) => line != null && line !== undefined)
     .join("\n");
 }
 

@@ -1,5 +1,15 @@
 export const ACCURACY_THRESHOLD_M = 80;
 
+export const GPS_SOURCES = new Set([
+  "whatsapp_pin",
+  "telegram_current",
+  "telegram_picked",
+]);
+
+export function isGpsSource(source) {
+  return GPS_SOURCES.has(source);
+}
+
 export function captureTruth(telegramLocation, opts = {}) {
   const accuracy =
     telegramLocation.horizontal_accuracy == null
@@ -49,7 +59,7 @@ export function applyLabel(truth, geocode = {}) {
     lat: truth.lat,
     lng: truth.lng,
     display_name: geocode.display_name ?? null,
-    road: geocode.road ?? null,
+    road: geocode.road ?? truth.road ?? null,
     suburb: geocode.suburb ?? null,
     city: geocode.city ?? null,
     postcode: geocode.postcode ?? null,
@@ -57,6 +67,33 @@ export function applyLabel(truth, geocode = {}) {
     fetched_at: new Date().toISOString(),
     landmark: truth.landmark ?? null,
     address_override: truth.address_override ?? null,
+    road_source: truth.road_source ?? null,
+    road_user_raw: truth.road_user_raw ?? null,
+    road_confirmed: truth.road_confirmed ?? false,
+  };
+}
+
+/**
+ * Set verified or user-provided street name on location (pin unchanged).
+ */
+export function setStreetName(
+  location,
+  { road, road_source, road_user_raw = null, road_confirmed = true } = {}
+) {
+  return {
+    ...location,
+    road: road ? String(road).trim() : null,
+    road_source: road_source || null,
+    road_user_raw: road_user_raw ? String(road_user_raw).trim() : null,
+    road_confirmed: Boolean(road_confirmed),
+  };
+}
+
+export function skipStreetName(location) {
+  return {
+    ...location,
+    road_source: "skipped",
+    road_confirmed: false,
   };
 }
 
@@ -84,6 +121,9 @@ export function replaceTruth(newTruth) {
     fetched_at: null,
     landmark: null,
     address_override: null,
+    road_source: null,
+    road_user_raw: null,
+    road_confirmed: false,
   };
 }
 

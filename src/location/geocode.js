@@ -194,6 +194,37 @@ export async function forwardGeocode(
   return rowToHit(best, q);
 }
 
+/**
+ * Return raw Nominatim search rows (for street candidate ranking).
+ */
+export async function searchGeocodeRows(
+  query,
+  { userAgent, fetchImpl, limit = 10 } = {}
+) {
+  if (!(await resolveToggle("nominatimEnabled"))) {
+    return [];
+  }
+  const q = String(query || "").trim();
+  if (!q) return [];
+
+  const fetchFn = fetchImpl || fetch;
+  const headers = await nominatimHeaders(userAgent);
+
+  const url = new URL(NOMINATIM_SEARCH_URL);
+  url.searchParams.set("q", q);
+  url.searchParams.set("format", "jsonv2");
+  url.searchParams.set("addressdetails", "1");
+  url.searchParams.set("limit", String(limit));
+  url.searchParams.set("countrycodes", "my");
+  url.searchParams.set("viewbox", PENANG_VIEWBOX);
+  url.searchParams.set("bounded", "0");
+
+  const res = await fetchFn(url, { headers });
+  if (!res.ok) return [];
+  const rows = await res.json();
+  return Array.isArray(rows) ? rows : [];
+}
+
 /** Try queries in order until Nominatim returns a hit. */
 export async function forwardGeocodeCandidates(
   queries,

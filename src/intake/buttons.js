@@ -18,6 +18,15 @@ export const BUTTON = {
   LOC_UNCERTAIN: "loc_uncertain",
   LOC_PICK_PREFIX: "loc_pick_",
   LOC_PICK_RETRY: "loc_pick_retry",
+  STREET_GPS_YES: "street_gps_yes",
+  STREET_GPS_NO: "street_gps_no",
+  STREET_GPS_SKIP: "street_gps_skip",
+  STREET_KNOW_YES: "street_know_yes",
+  STREET_KNOW_NO: "street_know_no",
+  STREET_CONFIRM_YES: "street_confirm_yes",
+  STREET_USE_RAW: "street_use_raw",
+  STREET_PICK_OTHER: "street_pick_other",
+  STREET_PICK_PREFIX: "street_pick_",
   SUBMIT_YES: "submit_yes",
   SUBMIT_CANCEL: "submit_cancel",
 };
@@ -63,6 +72,39 @@ export function placePickButtons(candidates) {
     label: (c.placeName || c.display_name || `Pilihan ${i + 1}`).slice(0, 60),
   }));
   buttons.push({ id: BUTTON.LOC_PICK_RETRY, label: "Cuba lokasi lain" });
+  return buttons;
+}
+
+export function streetGpsConfirmButtons() {
+  return [
+    { id: BUTTON.STREET_GPS_YES, label: "Ya, betul" },
+    { id: BUTTON.STREET_GPS_NO, label: "Tidak — taip nama lain" },
+    { id: BUTTON.STREET_GPS_SKIP, label: "Langkau" },
+  ];
+}
+
+export function streetKnowButtons() {
+  return [
+    { id: BUTTON.STREET_KNOW_YES, label: "Ya, saya tahu" },
+    { id: BUTTON.STREET_KNOW_NO, label: "Tidak / Tidak pasti" },
+  ];
+}
+
+export function streetConfirmButtons(hasAlternatives = false) {
+  const buttons = [{ id: BUTTON.STREET_CONFIRM_YES, label: "Ya, betul" }];
+  if (hasAlternatives) {
+    buttons.push({ id: BUTTON.STREET_PICK_OTHER, label: "Pilih jalan lain" });
+  }
+  buttons.push({ id: BUTTON.STREET_USE_RAW, label: "Guna teks saya" });
+  return buttons;
+}
+
+export function streetPickButtons(candidates) {
+  const buttons = (candidates || []).slice(0, 3).map((c, i) => ({
+    id: `${BUTTON.STREET_PICK_PREFIX}${i}`,
+    label: (c.streetName || `Jalan ${i + 1}`).slice(0, 60),
+  }));
+  buttons.push({ id: BUTTON.STREET_USE_RAW, label: "Guna teks saya" });
   return buttons;
 }
 

@@ -100,6 +100,10 @@ export function CaseDetailPage() {
     lat?: number;
     lng?: number;
     display_name?: string;
+    road?: string;
+    road_source?: string;
+    road_user_raw?: string;
+    road_confirmed?: boolean;
     landmark?: string;
     placeName?: string;
     daerahLabel?: string;
@@ -108,6 +112,13 @@ export function CaseDetailPage() {
     method?: string;
     source?: string;
     accuracy_m?: number;
+  };
+
+  const ROAD_SOURCE_LABEL: Record<string, string> = {
+    gps_detected: "Disahkan GPS",
+    ai_verified: "Disahkan AI",
+    user_raw: "Teks pelapor",
+    skipped: "Dilangkau",
   };
   const agencyId = c.jurisdiction?.agencyId || "";
   const portal =
@@ -272,6 +283,18 @@ export function CaseDetailPage() {
                 {loc.confirmed ? "Ya" : "Tidak"}
                 {loc.method ? ` · ${loc.method}` : ""}
               </p>
+            </div>
+            <div>
+              <p className="font-medium">Nama jalan</p>
+              <p>{loc.road || "—"}</p>
+              {loc.road_source ? (
+                <p className="text-[var(--color-muted-foreground)]">
+                  Sumber: {ROAD_SOURCE_LABEL[loc.road_source] || loc.road_source}
+                  {loc.road_user_raw && loc.road_user_raw !== loc.road
+                    ? ` · asal: ${loc.road_user_raw}`
+                    : ""}
+                </p>
+              ) : null}
             </div>
             <div>
               <p className="font-medium">Nama lokasi laporan</p>

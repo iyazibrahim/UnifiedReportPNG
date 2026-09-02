@@ -41,6 +41,7 @@ Admin dashboard + agency portals on a multi-channel intake platform (Telegram + 
 - [x] Login page: split-screen layout with carousel, password toggle, flag stripe edge
 - [x] Rebrand dashboard UI to **OnePenang Dashboard** (login, sidebar, title, agency portals)
 - [x] Location accuracy: fuzzy-match fix (no locality-only false positives), LLM POI/locality anchor extraction, disambiguation picker, Nominatim POI ranking, TF Mart + fuel/convenience seed expansion
+- [x] Street name capture flow: GPS detect + confirm, landmark street ask/input, AI verify with nearest-match suggestions, agency payload + dashboard Nama jalan
 
 ## Production readiness (2026-08-28)
 
@@ -86,13 +87,13 @@ npm run seed:landmarks:expand
 
 Compose: `mongo` + `app` (dashboard baked into image via Dockerfile).
 
-Landmark resolve order: LLM anchor extract → local Mongo DB (POI + locality scoped) → Nominatim (POI-ranked). Disambiguation buttons when confidence low. No admin CRUD — refresh with seed script only.
+Landmark resolve order: LLM anchor extract → local Mongo DB (POI + locality scoped) → Nominatim (POI-ranked). Disambiguation buttons when confidence low. After pin confirm: street flow (GPS detect/confirm, or landmark ask → AI verify). No admin CRUD — refresh with seed script only.
 
 Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins rejected in bot.
 
 ## Validation
 
-- `npm test` — 92 unit tests (incl. password helpers, landmark DB, geocode ranking, WhatsApp webhook)
+- `npm test` — 101 unit tests (incl. street capture, landmark DB, geocode ranking, WhatsApp webhook)
 - `npm run build:dashboard` — Vite production build OK
 
 ## Landmark coordinate fixes (2026-08-27)
@@ -124,3 +125,12 @@ Location scope: inside Pulau/Seberang or within 3 km of boundary; farther pins r
 - Curated `TF Mart Balik Pulau` added to seed; expand script includes fuel stations + convenience brands
 - Bot copy teaches `[Nama kedai] [kawasan]` format + WhatsApp GPS share guide
 - Validation: `npm test` — 92 pass
+
+## Street name capture (2026-09-02)
+
+- After pin confirm: GPS users see detected street confirm (Ya / Tidak / Langkau); landmark users asked if they know street name
+- User-typed streets verified via `resolveStreet.js` (LLM + Nominatim near pin) with pick/alternatives or raw-text fallback
+- Case stores `road`, `road_source` (gps_detected | ai_verified | user_raw | skipped), `road_user_raw`, `road_confirmed`
+- Agency dashboard shows **Nama jalan** with source badge
+- Post-resolve `reverseGeocode` enriches landmark pins before street step
+- Validation: `npm test` — 101 pass
