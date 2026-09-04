@@ -11,6 +11,11 @@ let cache = null;
 let cacheAt = 0;
 const CACHE_MS = 60_000;
 
+export function invalidateLandmarkCache() {
+  cache = null;
+  cacheAt = 0;
+}
+
 export async function loadLandmarksCached({ force = false } = {}) {
   if (mongoose.connection.readyState !== 1) {
     return cache || [];
@@ -18,7 +23,7 @@ export async function loadLandmarksCached({ force = false } = {}) {
   const now = Date.now();
   if (!force && cache && now - cacheAt < CACHE_MS) return cache;
   try {
-    cache = await Landmark.find({}).lean();
+    cache = await Landmark.find({ disabled: { $ne: true } }).lean();
     cacheAt = now;
     return cache;
   } catch {

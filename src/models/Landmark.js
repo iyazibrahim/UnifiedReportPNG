@@ -33,9 +33,10 @@ const landmarkSchema = new mongoose.Schema(
     },
     source: {
       type: String,
-      enum: ["osm", "google", "merged", "curated"],
+      enum: ["osm", "google", "merged", "curated", "citizen_confirmed"],
       default: "curated",
     },
+    disabled: { type: Boolean, default: false, index: true },
     osmId: { type: String, default: null, sparse: true },
     googlePlaceId: { type: String, default: null, sparse: true },
     address: { type: String, default: "" },

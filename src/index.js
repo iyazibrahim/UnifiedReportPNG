@@ -34,6 +34,21 @@ const openRouterModel = await resolveConfig(
   process.env,
   "openai/gpt-4o-mini"
 );
+const aiPrimaryModel = await resolveConfig(
+  "aiPrimaryModel",
+  process.env,
+  openRouterModel.value || "openai/gpt-4o-mini"
+);
+const aiStrongModel = await resolveConfig(
+  "aiStrongModel",
+  process.env,
+  "openai/gpt-4o"
+);
+const aiEmbeddingModel = await resolveConfig(
+  "aiEmbeddingModel",
+  process.env,
+  "openai/text-embedding-3-small"
+);
 const nominatimUa = await resolveConfig(
   "nominatimUserAgent",
   process.env,
@@ -47,7 +62,14 @@ const runtimeConfig = {
   webhookUrl: webhookResolved.value || config.webhookUrl,
   webhookSecret: webhookSecretResolved.value || config.webhookSecret,
   openRouterKey: openRouterKey.value || config.openRouterKey,
-  openRouterModel: openRouterModel.value || config.openRouterModel,
+  openRouterModel:
+    aiPrimaryModel.value ||
+    openRouterModel.value ||
+    config.openRouterModel,
+  aiPrimaryModel:
+    aiPrimaryModel.value || openRouterModel.value || config.aiPrimaryModel,
+  aiStrongModel: aiStrongModel.value || config.aiStrongModel,
+  aiEmbeddingModel: aiEmbeddingModel.value || config.aiEmbeddingModel,
   nominatimUserAgent: nominatimUa.value || config.nominatimUserAgent,
 };
 

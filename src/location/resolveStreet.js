@@ -3,6 +3,8 @@
  */
 import { daerahLabel } from "../jurisdiction/daerah.js";
 import { searchGeocodeRows } from "./geocode.js";
+import { completeWithFailover } from "../ai/router.js";
+import { matchStreetDb } from "./streetStore.js";
 
 const SYSTEM = `You help verify street names for citizen reports in Pulau Pinang (Penang), Malaysia only.
 Given a street name phrase in Malay/English slang, return JSON only:
@@ -72,10 +74,18 @@ function scoreStreetRow(row, query, pinLat, pinLng) {
   const lng = Number(row.lon);
   let score = tokenOverlap(query, streetName) * 0.5;
   if (normalize(streetName) === normalize(query)) score += 0.4;
-  else if (normalize(streetName).includes(normalize(query)) || normalize(query).includes(normalize(streetName))) {
+  else if (
+    normalize(streetName).includes(normalize(query)) ||
+    normalize(query).includes(normalize(streetName))
+  ) {
     score += 0.25;
   }
-  if (Number.isFinite(pinLat) && Number.isFinite(pinLng) && Number.isFinite(lat) && Number.isFinite(lng)) {
+  if (
+    Number.isFinite(pinLat) &&
+    Number.isFinite(pinLng) &&
+    Number.isFinite(lat) &&
+    Number.isFinite(lng)
+  ) {
     const dist = haversineM(pinLat, pinLng, lat, lng);
     if (dist <= 500) score += 0.35;
     else if (dist <= 2000) score += 0.2;
@@ -86,13 +96,31 @@ function scoreStreetRow(row, query, pinLat, pinLng) {
   return Math.min(1, Math.max(0, score));
 }
 
+function validateStreet(parsed) {
+  const confidence = Math.max(
+    0,
+    Math.min(1, Number(parsed?.confidence) || 0.5)
+  );
+  const streetName = String(parsed?.streetName || "").trim();
+  if (!parsed?.ok || !streetName) {
+    return { ok: false, reason: "street_not_ok", confidence };
+  }
+  return { ok: true, confidence };
+}
+
 export async function resolveStreetWithLlm(
   text,
-  { apiKey, model, daerah, fetchImpl } = {}
+  { apiKey, model, strongModel, daerah, fetchImpl } = {}
 ) {
   const raw = String(text || "").trim();
   if (!raw) {
-    return { ok: false, streetName: "", searchQueries: [], confidence: 0, method: "empty" };
+    return {
+      ok: false,
+      streetName: "",
+      searchQueries: [],
+      confidence: 0,
+      method: "empty",
+    };
   }
   const daerahName = daerah ? daerahLabel(daerah) : "Penang";
   if (!apiKey) {
@@ -104,81 +132,67 @@ export async function resolveStreetWithLlm(
       method: "raw_fallback",
     };
   }
-  const fetchFn = fetchImpl || fetch;
-  try {
-    const res = await fetchFn("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
+
+  const result = await completeWithFailover({
+    task: "street",
+    apiKey,
+    primaryModel: model,
+    strongModel,
+    fetchImpl,
+    messages: [
+      { role: "system", content: SYSTEM },
+      {
+        role: "user",
+        content: `Daerah: ${daerahName}\nStreet input: ${raw.slice(0, 300)}`,
       },
-      body: JSON.stringify({
-        model: model || "openai/gpt-4o-mini",
-        temperature: 0,
-        messages: [
-          { role: "system", content: SYSTEM },
-          {
-            role: "user",
-            content: `Daerah: ${daerahName}\nStreet input: ${raw.slice(0, 300)}`,
-          },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      return {
-        ok: true,
-        streetName: raw,
-        searchQueries: [`${raw} ${daerahName} Penang`],
-        confidence: 0.3,
-        method: "llm_http_fallback",
-      };
-    }
-    const body = await res.json();
-    const content = body.choices?.[0]?.message?.content || "";
-    const jsonStart = content.indexOf("{");
-    const jsonEnd = content.lastIndexOf("}");
-    if (jsonStart < 0 || jsonEnd < 0) {
-      return {
-        ok: true,
-        streetName: raw,
-        searchQueries: [`${raw} Penang Malaysia`],
-        confidence: 0.3,
-        method: "llm_parse_fallback",
-      };
-    }
-    const parsed = JSON.parse(content.slice(jsonStart, jsonEnd + 1));
-    const queries = [];
-    if (Array.isArray(parsed.searchQueries)) {
-      for (const q of parsed.searchQueries) queries.push(String(q || "").trim());
-    }
-    const streetName = String(parsed.streetName || parsed.searchQueries?.[0] || raw).trim();
-    if (streetName) queries.unshift(streetName);
-    const unique = [...new Set(queries.filter(Boolean))];
-    if (!parsed.ok || !unique.length) {
-      return {
-        ok: false,
-        streetName: "",
-        searchQueries: [],
-        confidence: Number(parsed.confidence) || 0,
-        method: "llm",
-      };
-    }
-    return {
-      ok: true,
-      streetName,
-      searchQueries: unique,
-      confidence: Math.max(0, Math.min(1, Number(parsed.confidence) || 0.5)),
-      method: "llm",
-    };
-  } catch {
+    ],
+    validate: validateStreet,
+  });
+
+  if (!result.parsed) {
     return {
       ok: true,
       streetName: raw,
-      searchQueries: [`${raw} Penang Malaysia`],
+      searchQueries: [`${raw} ${daerahName} Penang`],
       confidence: 0.3,
-      method: "llm_error_fallback",
+      method: result.switchReason || "llm_fallback",
+      modelUsed: result.modelUsed,
+      switched: result.switched,
     };
   }
+
+  const queries = [];
+  if (Array.isArray(result.parsed.searchQueries)) {
+    for (const q of result.parsed.searchQueries) {
+      queries.push(String(q || "").trim());
+    }
+  }
+  const streetName = String(
+    result.parsed.streetName || result.parsed.searchQueries?.[0] || raw
+  ).trim();
+  if (streetName) queries.unshift(streetName);
+  const unique = [...new Set(queries.filter(Boolean))];
+  if (!result.parsed.ok || !unique.length) {
+    return {
+      ok: false,
+      streetName: "",
+      searchQueries: [],
+      confidence: result.confidence || 0,
+      method: "llm",
+      modelUsed: result.modelUsed,
+      switched: result.switched,
+    };
+  }
+  return {
+    ok: true,
+    streetName,
+    searchQueries: unique,
+    confidence: result.confidence || 0.5,
+    method: "llm",
+    modelUsed: result.modelUsed,
+    switched: result.switched,
+    switchReason: result.switchReason,
+  };
 }
 
 export async function searchStreetCandidates(
@@ -219,16 +233,38 @@ export async function searchStreetCandidates(
  */
 export async function resolveStreetName(
   userInput,
-  { lat, lng, daerah, apiKey, model, userAgent, fetchImpl } = {}
+  { lat, lng, daerah, apiKey, model, strongModel, userAgent, fetchImpl } = {}
 ) {
   const userRaw = String(userInput || "").trim();
   if (!userRaw) {
-    return { best: null, alternatives: [], confidence: 0, method: "empty", userRaw };
+    return {
+      best: null,
+      alternatives: [],
+      confidence: 0,
+      method: "empty",
+      userRaw,
+    };
+  }
+
+  try {
+    const dbHits = await matchStreetDb(userRaw, { lat, lng, daerah, limit: 3 });
+    if (dbHits.length && dbHits[0].score >= 0.85) {
+      return {
+        best: dbHits[0],
+        alternatives: dbHits.slice(1),
+        confidence: dbHits[0].score,
+        method: "street_db",
+        userRaw,
+      };
+    }
+  } catch {
+    // continue
   }
 
   const llm = await resolveStreetWithLlm(userRaw, {
     apiKey,
     model,
+    strongModel,
     daerah,
     fetchImpl,
   });
@@ -246,6 +282,22 @@ export async function resolveStreetName(
     fetchImpl,
   });
 
+  try {
+    const dbHits = await matchStreetDb(userRaw, { lat, lng, daerah, limit: 3 });
+    for (const hit of dbHits) {
+      if (
+        !candidates.some(
+          (c) => normalize(c.streetName) === normalize(hit.streetName)
+        )
+      ) {
+        candidates.push(hit);
+      }
+    }
+    candidates.sort((a, b) => b.score - a.score);
+  } catch {
+    // ignore
+  }
+
   if (!candidates.length) {
     return {
       best: null,
@@ -257,12 +309,18 @@ export async function resolveStreetName(
   }
 
   const best = candidates[0];
-  const confidence = Math.max(best.score, llm.confidence || 0);
   return {
     best,
-    alternatives: candidates.slice(0, 3),
-    confidence,
-    method: llm.method === "llm" ? "ai_verified" : "nominatim",
+    alternatives: candidates.slice(1, 4),
+    confidence: best.score,
+    method:
+      best.method === "street_db"
+        ? "street_db"
+        : llm.method === "llm"
+          ? "ai_verified"
+          : llm.method,
     userRaw,
+    modelUsed: llm.modelUsed,
+    switched: llm.switched,
   };
 }

@@ -1,5 +1,7 @@
 /** Shared menu / button ids used by Telegram + WhatsApp adapters. */
 
+import { CATEGORIES } from "../jurisdiction/categories.js";
+
 export const MENU = {
   NEW: "Aduan Baharu",
   STATUS: "Semak Aduan",
@@ -29,6 +31,7 @@ export const BUTTON = {
   STREET_PICK_PREFIX: "street_pick_",
   SUBMIT_YES: "submit_yes",
   SUBMIT_CANCEL: "submit_cancel",
+  CAT_PICK_PREFIX: "cat_pick_",
 };
 
 export function photoSkipButtons() {
@@ -114,4 +117,15 @@ export function mainMenuButtons() {
     { id: "menu_status", label: MENU.STATUS },
     { id: "menu_help", label: MENU.HELP },
   ];
+}
+
+/** Clarifying category pick when AI confidence is low. */
+export function categoryClarifyButtons(categoryIds) {
+  return (categoryIds || []).slice(0, 3).map((id) => {
+    const cat = CATEGORIES[id];
+    return {
+      id: `${BUTTON.CAT_PICK_PREFIX}${id}`,
+      label: (cat?.label || String(id)).slice(0, 60),
+    };
+  });
 }

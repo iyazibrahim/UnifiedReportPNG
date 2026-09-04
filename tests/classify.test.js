@@ -19,7 +19,10 @@ describe("classifyWithLlm", () => {
     });
     const result = await classifyWithLlm("pokok tumbang", {
       apiKey: "test",
+      model: "primary/m",
+      strongModel: "primary/m",
       fetchImpl,
+      retrievedChunks: [],
     });
     assert.equal(result.categoryId, "pokok");
     assert.equal(result.method, "llm");
@@ -27,7 +30,10 @@ describe("classifyWithLlm", () => {
   });
 
   it("returns null without an API key", async () => {
-    const result = await classifyWithLlm("sampah", { apiKey: "" });
+    const result = await classifyWithLlm("sampah", {
+      apiKey: "",
+      retrievedChunks: [],
+    });
     assert.equal(result, null);
   });
 });

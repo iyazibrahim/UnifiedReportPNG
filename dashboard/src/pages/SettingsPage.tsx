@@ -41,6 +41,7 @@ const TOGGLE_GROUPS: Array<{
       { key: "whatsappBotEnabled", label: "WhatsApp bot" },
       { key: "llmClassificationEnabled", label: "LLM classification" },
       { key: "keywordFallbackEnabled", label: "Keyword fallback" },
+      { key: "ragEnabled", label: "RAG retrieval (knowledge)" },
       { key: "nominatimEnabled", label: "Nominatim reverse geocode" },
       { key: "mockDispatchEnabled", label: "Agency dispatch" },
       { key: "abuseGuardsEnabled", label: "Abuse rate limits" },
@@ -59,7 +60,10 @@ const TOGGLE_GROUPS: Array<{
 ];
 
 const CONFIG_FIELDS = [
-  { key: "openRouterModel", label: "OpenRouter model" },
+  { key: "aiPrimaryModel", label: "AI primary model (OpenRouter)" },
+  { key: "aiStrongModel", label: "AI strong model (failover)" },
+  { key: "aiEmbeddingModel", label: "AI embedding model (RAG)" },
+  { key: "openRouterModel", label: "OpenRouter model (legacy fallback)" },
   { key: "telegramWebhookUrl", label: "Telegram webhook URL" },
   { key: "publicBaseUrl", label: "Public base URL (for WhatsApp webhook)" },
   { key: "whatsappPhoneNumberId", label: "WhatsApp phone number ID" },
@@ -100,7 +104,7 @@ export function SettingsPage() {
   const [config, setConfig] = useState<Record<string, string>>({});
   const [secrets, setSecrets] = useState<Record<string, string>>({});
   const [tab, setTab] = useState<
-    "features" | "config" | "secrets" | "governance" | "users"
+    "features" | "config" | "secrets" | "knowledge" | "governance" | "users"
   >("features");
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [usersLoading, setUsersLoading] = useState(false);
@@ -108,6 +112,16 @@ export function SettingsPage() {
   const [resetPassword, setResetPassword] = useState("");
   const [error, setError] = useState("");
   const [saving, setSaving] = useState(false);
+  const [knowledgeDocs, setKnowledgeDocs] = useState<
+    Array<{ _id: string; title: string; docType: string; agencyId?: string; active: boolean; createdAt?: string }>
+  >([]);
+  const [chunkCount, setChunkCount] = useState(0);
+  const [knowledgeForm, setKnowledgeForm] = useState({
+    title: "",
+    body: "",
+    agencyId: "",
+    docType: "sop",
+  });
   const [governance, setGovernance] = useState({
     dataControllerName: "",
     superAdminNames: "",
@@ -153,6 +167,65 @@ export function SettingsPage() {
       .catch((e) => toast.error(e.message))
       .finally(() => setUsersLoading(false));
   }, [tab]);
+
+  useEffect(() => {
+    if (tab !== "knowledge") return;
+    api<{
+      docs: typeof knowledgeDocs;
+      chunkCount: number;
+    }>("/api/admin/knowledge")
+      .then((res) => {
+        setKnowledgeDocs(res.docs || []);
+        setChunkCount(res.chunkCount || 0);
+      })
+      .catch((e) => toast.error(e.message));
+  }, [tab]);
+
+  async function saveKnowledge() {
+    if (!knowledgeForm.body.trim()) {
+      toast.error("SOP / FAQ body is required");
+      return;
+    }
+    setSaving(true);
+    try {
+      await api("/api/admin/knowledge", {
+        method: "POST",
+        body: JSON.stringify({
+          title: knowledgeForm.title || "Untitled",
+          body: knowledgeForm.body,
+          agencyId: knowledgeForm.agencyId || null,
+          docType: knowledgeForm.docType,
+        }),
+      });
+      toast.success("Knowledge document indexed");
+      setKnowledgeForm({ title: "", body: "", agencyId: "", docType: "sop" });
+      const res = await api<{
+        docs: typeof knowledgeDocs;
+        chunkCount: number;
+      }>("/api/admin/knowledge");
+      setKnowledgeDocs(res.docs || []);
+      setChunkCount(res.chunkCount || 0);
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Upload failed");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  async function deactivateKnowledge(id: string) {
+    setSaving(true);
+    try {
+      await api(`/api/admin/knowledge/${id}`, { method: "DELETE" });
+      toast.success("Document deactivated");
+      setKnowledgeDocs((docs) =>
+        docs.map((d) => (d._id === id ? { ...d, active: false } : d))
+      );
+    } catch (e) {
+      toast.error(e instanceof Error ? e.message : "Failed");
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function resetUserPasswordSubmit(userId: string) {
     if (!resetPassword || resetPassword.length < 8) {
@@ -248,6 +321,7 @@ export function SettingsPage() {
             ["features", "Features"],
             ["config", "Configuration"],
             ["secrets", "API keys"],
+            ["knowledge", "Knowledge"],
             ["governance", "Ownership & policy"],
             ["users", "Users"],
           ] as const
@@ -363,6 +437,110 @@ export function SettingsPage() {
             ))}
           </CardContent>
         </Card>
+      ) : null}
+
+      {tab === "knowledge" ? (
+        <div className="flex flex-col gap-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Knowledge base (RAG)</CardTitle>
+              <CardDescription>
+                Paste SOP / FAQ / policy text. Chunks are embedded for
+                classification grounding. Active chunks: {chunkCount}
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="flex flex-col gap-4">
+              <div className="flex flex-col gap-2">
+                <Label>Title</Label>
+                <Input
+                  value={knowledgeForm.title}
+                  onChange={(e) =>
+                    setKnowledgeForm((f) => ({ ...f, title: e.target.value }))
+                  }
+                  className="min-h-11"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Type</Label>
+                <Input
+                  value={knowledgeForm.docType}
+                  onChange={(e) =>
+                    setKnowledgeForm((f) => ({ ...f, docType: e.target.value }))
+                  }
+                  placeholder="sop | faq | policy | guide"
+                  className="min-h-11"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Agency id (optional)</Label>
+                <Input
+                  value={knowledgeForm.agencyId}
+                  onChange={(e) =>
+                    setKnowledgeForm((f) => ({ ...f, agencyId: e.target.value }))
+                  }
+                  placeholder="pearl_mbpp"
+                  className="min-h-11"
+                />
+              </div>
+              <div className="flex flex-col gap-2">
+                <Label>Body</Label>
+                <textarea
+                  className="min-h-40 rounded-md border border-[var(--color-border)] bg-transparent px-3 py-2 text-sm"
+                  value={knowledgeForm.body}
+                  onChange={(e) =>
+                    setKnowledgeForm((f) => ({ ...f, body: e.target.value }))
+                  }
+                  placeholder="Category rules, agency SOPs, FAQ…"
+                />
+              </div>
+              <Button
+                className="w-fit min-h-11"
+                onClick={saveKnowledge}
+                disabled={saving}
+              >
+                {saving ? "Indexing…" : "Index document"}
+              </Button>
+            </CardContent>
+          </Card>
+          <Card>
+            <CardHeader>
+              <CardTitle>Uploaded documents</CardTitle>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {knowledgeDocs.length === 0 ? (
+                <p className="text-sm text-[var(--color-muted-foreground)]">
+                  No documents yet.
+                </p>
+              ) : (
+                knowledgeDocs.map((d) => (
+                  <div
+                    key={d._id}
+                    className="flex items-center justify-between gap-3 border-b pb-2 last:border-0"
+                  >
+                    <div>
+                      <p className="font-medium">{d.title}</p>
+                      <p className="text-xs text-[var(--color-muted-foreground)]">
+                        {d.docType}
+                        {d.agencyId ? ` · ${d.agencyId}` : ""}
+                        {d.active === false ? " · inactive" : ""}
+                      </p>
+                    </div>
+                    {d.active !== false ? (
+                      <Button
+                        size="sm"
+                        variant="outline"
+                        disabled={saving}
+                        onClick={() => deactivateKnowledge(d._id)}
+                      >
+                        Deactivate
+                      </Button>
+                    ) : null}
+                  </div>
+                ))
+              )}
+            </CardContent>
+          </Card>
+        </div>
       ) : null}
 
       {tab === "users" ? (
@@ -558,7 +736,7 @@ export function SettingsPage() {
       ) : null}
 
       <Separator />
-      {tab !== "governance" && tab !== "users" ? (
+      {tab !== "governance" && tab !== "users" && tab !== "knowledge" ? (
         <Button
           className="min-h-11 w-fit"
           onClick={save}

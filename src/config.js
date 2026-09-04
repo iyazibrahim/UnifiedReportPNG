@@ -9,6 +9,11 @@ export function loadConfig(env = process.env) {
     webhookSecret: env.TELEGRAM_WEBHOOK_SECRET || "",
     openRouterKey: env.OPENROUTER_API_KEY || "",
     openRouterModel: env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
+    aiPrimaryModel:
+      env.AI_PRIMARY_MODEL || env.OPENROUTER_MODEL || "openai/gpt-4o-mini",
+    aiStrongModel: env.AI_STRONG_MODEL || "openai/gpt-4o",
+    aiEmbeddingModel:
+      env.AI_EMBEDDING_MODEL || "openai/text-embedding-3-small",
     nominatimUserAgent:
       env.NOMINATIM_USER_AGENT || "UnifiedReportPenang/1.0",
     opsUser: env.OPS_USER || "ops",

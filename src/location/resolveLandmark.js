@@ -5,13 +5,14 @@
  */
 import { buildLandmarkQueries } from "./landmarkQueries.js";
 import { forwardGeocodeCandidates } from "./geocode.js";
-import { matchLandmarkDb, matchLandmarkDbTopN } from "./landmarkStore.js";
+import { matchLandmarkDbTopN } from "./landmarkStore.js";
 import { locateDaerah, daerahLabel } from "../jurisdiction/daerah.js";
 import { splitPoiAndLocality } from "./localityHints.js";
 import {
   parseAnchorFromLlm,
   buildDbSearchQueries,
 } from "./extractPlaceAnchor.js";
+import { completeWithFailover } from "../ai/router.js";
 
 const SYSTEM = `You help locate citizen reports in Pulau Pinang (Penang), Malaysia only.
 Given a landmark or place phrase in Malay/English slang, return JSON only:
@@ -54,7 +55,22 @@ function heuristicAnchor(raw) {
   };
 }
 
-export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } = {}) {
+function validateLandmark(parsed) {
+  const anchor = parseAnchorFromLlm(parsed);
+  const confidence = Math.max(
+    0,
+    Math.min(1, Number(parsed?.confidence) || 0.5)
+  );
+  if (!parsed?.ok || !(anchor.searchQueries || []).length) {
+    return { ok: false, reason: "landmark_not_ok", confidence };
+  }
+  return { ok: true, confidence };
+}
+
+export async function resolveLandmarkWithLlm(
+  text,
+  { apiKey, model, strongModel, fetchImpl, extraHints } = {}
+) {
   const raw = String(text || "").trim();
   if (!raw) {
     return {
@@ -72,80 +88,71 @@ export async function resolveLandmarkWithLlm(text, { apiKey, model, fetchImpl } 
     const anchor = heuristicAnchor(raw);
     return { ok: true, ...anchor, searchQuery: anchor.searchQueries[0] };
   }
-  const fetchFn = fetchImpl || fetch;
-  try {
-    const res = await fetchFn("https://openrouter.ai/api/v1/chat/completions", {
-      method: "POST",
-      headers: {
-        Authorization: `Bearer ${apiKey}`,
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({
-        model: model || "openai/gpt-4o-mini",
-        temperature: 0,
-        messages: [
-          { role: "system", content: SYSTEM },
-          { role: "user", content: raw.slice(0, 500) },
-        ],
-      }),
-    });
-    if (!res.ok) {
-      const anchor = heuristicAnchor(raw);
-      return {
-        ok: true,
-        ...anchor,
-        searchQuery: anchor.searchQueries[0],
-        method: "llm_http_fallback",
-      };
-    }
-    const body = await res.json();
-    const content = body.choices?.[0]?.message?.content || "";
-    const jsonStart = content.indexOf("{");
-    const jsonEnd = content.lastIndexOf("}");
-    if (jsonStart < 0 || jsonEnd < 0) {
-      const anchor = heuristicAnchor(raw);
-      return {
-        ok: true,
-        ...anchor,
-        searchQuery: anchor.searchQueries[0],
-        method: "llm_parse_fallback",
-      };
-    }
-    const parsed = JSON.parse(content.slice(jsonStart, jsonEnd + 1));
-    const anchor = parseAnchorFromLlm(parsed);
-    const searchQueries = anchor.searchQueries;
-    const ok = Boolean(parsed.ok) && searchQueries.length > 0;
-    if (!ok) {
-      return {
-        ok: false,
-        poiName: anchor.poiName,
-        locality: anchor.locality,
-        searchQuery: "",
-        searchQueries: [],
-        areaHint: anchor.areaHint,
-        confidence: anchor.confidence,
-        method: "llm",
-      };
-    }
-    return {
-      ok: true,
-      poiName: anchor.poiName,
-      locality: anchor.locality,
-      searchQuery: searchQueries[0],
-      searchQueries,
-      areaHint: anchor.areaHint,
-      confidence: anchor.confidence,
-      method: "llm",
-    };
-  } catch {
+
+  const hintBlock = extraHints?.length
+    ? `\nPlace alias hints from similar reports: ${extraHints.join("; ")}`
+    : "";
+
+  const result = await completeWithFailover({
+    task: "landmark",
+    apiKey,
+    primaryModel: model,
+    strongModel,
+    fetchImpl,
+    messages: [
+      { role: "system", content: SYSTEM + hintBlock },
+      { role: "user", content: raw.slice(0, 500) },
+    ],
+    validate: validateLandmark,
+  });
+
+  if (!result.parsed) {
     const anchor = heuristicAnchor(raw);
     return {
       ok: true,
       ...anchor,
       searchQuery: anchor.searchQueries[0],
-      method: "llm_error_fallback",
+      method: result.switchReason || "llm_fallback",
+      modelUsed: result.modelUsed,
+      switched: result.switched,
     };
   }
+
+  const anchor = parseAnchorFromLlm(result.parsed);
+  const searchQueries = [
+    ...llmQueriesFromParsed(result.parsed),
+    ...(extraHints || []).map((h) => `${h} Penang`),
+  ].filter(Boolean);
+  const unique = [...new Set(searchQueries)];
+  const ok = Boolean(result.parsed.ok) && unique.length > 0;
+  if (!ok) {
+    return {
+      ok: false,
+      poiName: anchor.poiName,
+      locality: anchor.locality,
+      searchQuery: "",
+      searchQueries: [],
+      areaHint: anchor.areaHint,
+      confidence: result.confidence || anchor.confidence,
+      method: "llm",
+      modelUsed: result.modelUsed,
+      switched: result.switched,
+      switchReason: result.switchReason,
+    };
+  }
+  return {
+    ok: true,
+    poiName: anchor.poiName,
+    locality: anchor.locality,
+    searchQuery: unique[0],
+    searchQueries: unique,
+    areaHint: anchor.areaHint,
+    confidence: result.confidence || anchor.confidence,
+    method: "llm",
+    modelUsed: result.modelUsed,
+    switched: result.switched,
+    switchReason: result.switchReason,
+  };
 }
 
 function attachDaerah(hit, method) {
@@ -249,14 +256,20 @@ async function searchLandmarkDb(raw, anchor, { skipDb }) {
  */
 export async function resolveCitizenPlaceWithOptions(
   text,
-  { apiKey, model, userAgent, fetchImpl, skipDb = false } = {}
+  { apiKey, model, strongModel, userAgent, fetchImpl, skipDb = false, extraHints } = {}
 ) {
   const raw = String(text || "").trim();
   if (!raw) {
     return { best: null, candidates: [], needsDisambiguation: false, confidence: 0 };
   }
 
-  const resolved = await resolveLandmarkWithLlm(raw, { apiKey, model, fetchImpl });
+  const resolved = await resolveLandmarkWithLlm(raw, {
+    apiKey,
+    model,
+    strongModel,
+    fetchImpl,
+    extraHints,
+  });
   const anchor = {
     poiName: resolved.poiName || "",
     locality: resolved.locality || "",
@@ -314,14 +327,16 @@ export async function resolveCitizenPlaceWithOptions(
  */
 export async function resolveCitizenPlace(
   text,
-  { apiKey, model, userAgent, fetchImpl, skipDb = false } = {}
+  { apiKey, model, strongModel, userAgent, fetchImpl, skipDb = false, extraHints } = {}
 ) {
   const result = await resolveCitizenPlaceWithOptions(text, {
     apiKey,
     model,
+    strongModel,
     userAgent,
     fetchImpl,
     skipDb,
+    extraHints,
   });
   if (result.needsDisambiguation && result.candidates.length > 1) {
     return { ...result.best, disambiguationCandidates: result.candidates };

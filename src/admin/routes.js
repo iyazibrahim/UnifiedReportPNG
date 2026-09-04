@@ -30,6 +30,16 @@ import { buildExternalRef } from "../adapters/mocks.js";
 import { toDispatchPayload } from "../cases/payload.js";
 import { getSlaHoursForAgency } from "../governance/service.js";
 import { computeDueAt } from "../adapters/official.js";
+import { resolveJurisdiction } from "../jurisdiction/resolver.js";
+import {
+  createAndIngestKnowledgeDoc,
+  deactivateChunksForDoc,
+  ingestCorrection,
+} from "../ai/ingest.js";
+import { KnowledgeDoc } from "../models/KnowledgeDoc.js";
+import { KnowledgeChunk } from "../models/KnowledgeChunk.js";
+import { Landmark } from "../models/Landmark.js";
+import { invalidateLandmarkCache } from "../location/landmarkStore.js";
 
 function ticketBucket(status) {
   if (status === "in_progress") return "in_progress";
@@ -455,6 +465,18 @@ export function createAdminRouter(config) {
         ? "triaged"
         : "dispatched";
       await caseDoc.save();
+      try {
+        await ingestCorrection({
+          caseRef: caseDoc.ref,
+          text: caseDoc.intake?.text,
+          categoryId: caseDoc.classification?.categoryId,
+          agencyId,
+          daerah: caseDoc.location?.daerah,
+          note: `Admin reassigned to ${agency.label}`,
+        });
+      } catch {
+        // non-fatal
+      }
       await writeAudit({
         action: "case_reassign",
         actorUsername: req.admin?.sub,
@@ -467,6 +489,157 @@ export function createAdminRouter(config) {
     } catch (err) {
       res.status(400).json({ error: err.message });
     }
+  });
+
+  router.patch("/cases/:ref/classification", async (req, res) => {
+    const categoryId = String(req.body?.categoryId || "");
+    const category = CATEGORIES[categoryId];
+    if (!category) {
+      return res.status(400).json({ error: "Unknown category" });
+    }
+    const caseDoc = await Case.findOne({
+      ref: String(req.params.ref).toUpperCase(),
+      hidden: { $ne: true },
+    });
+    if (!caseDoc) return res.status(404).json({ error: "Not found" });
+
+    const prevCategory = caseDoc.classification?.categoryId;
+    const loc = caseDoc.location || {};
+    caseDoc.classification = {
+      ...(caseDoc.classification || {}),
+      categoryId: category.id,
+      categoryLabel: category.label,
+      confidence: 1,
+      method: "admin_correction",
+      correctedFrom: prevCategory || null,
+      correctedBy: req.admin?.sub || "admin",
+    };
+    const jurisdiction = resolveJurisdiction({
+      categoryId: category.id,
+      lat: loc.lat,
+      lng: loc.lng,
+      label: {
+        display_name: loc.display_name,
+        road: loc.road,
+      },
+    });
+    caseDoc.jurisdiction = {
+      ...jurisdiction,
+      reason: `Kategori dibetulkan oleh admin (${req.admin?.sub}) · ${jurisdiction.reason}`,
+    };
+    await caseDoc.save();
+    try {
+      await ingestCorrection({
+        caseRef: caseDoc.ref,
+        text: caseDoc.intake?.text,
+        categoryId: category.id,
+        agencyId: caseDoc.jurisdiction?.agencyId,
+        daerah: loc.daerah,
+        note: `Admin corrected category from ${prevCategory} to ${category.id}`,
+      });
+    } catch {
+      // non-fatal
+    }
+    await writeAudit({
+      action: "case_classification_fix",
+      actorUsername: req.admin?.sub,
+      targetType: "case",
+      targetId: caseDoc.ref,
+      meta: { categoryId, prevCategory },
+      ip: req.ip,
+    });
+    res.json({ case: caseDoc.toObject() });
+  });
+
+  router.get("/knowledge", async (_req, res) => {
+    const docs = await KnowledgeDoc.find({})
+      .sort({ createdAt: -1 })
+      .limit(100)
+      .lean();
+    const chunkCount = await KnowledgeChunk.countDocuments({
+      active: { $ne: false },
+    });
+    res.json({ docs, chunkCount });
+  });
+
+  router.post("/knowledge", async (req, res) => {
+    try {
+      const { title, body, agencyId, docType } = req.body || {};
+      if (!body || !String(body).trim()) {
+        return res.status(400).json({ error: "body required" });
+      }
+      const result = await createAndIngestKnowledgeDoc({
+        title: title || "Untitled",
+        body: String(body),
+        agencyId: agencyId || null,
+        docType: docType || "sop",
+        createdBy: req.admin?.sub || "admin",
+      });
+      await writeAudit({
+        action: "knowledge_create",
+        actorUsername: req.admin?.sub,
+        targetType: "knowledge",
+        targetId: String(result.doc._id),
+        meta: { chunks: result.chunks.length },
+        ip: req.ip,
+      });
+      res.json({
+        doc: result.doc.toObject(),
+        chunkCount: result.chunks.length,
+      });
+    } catch (err) {
+      res.status(400).json({ error: err.message });
+    }
+  });
+
+  router.delete("/knowledge/:id", async (req, res) => {
+    const doc = await KnowledgeDoc.findById(req.params.id);
+    if (!doc) return res.status(404).json({ error: "Not found" });
+    doc.active = false;
+    await doc.save();
+    await deactivateChunksForDoc(doc._id);
+    await writeAudit({
+      action: "knowledge_deactivate",
+      actorUsername: req.admin?.sub,
+      targetType: "knowledge",
+      targetId: String(doc._id),
+      ip: req.ip,
+    });
+    res.json({ ok: true });
+  });
+
+  router.get("/landmarks", async (req, res) => {
+    const q = String(req.query.q || "").trim();
+    const filter = {};
+    if (q) {
+      filter.$or = [
+        { name: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },
+        { aliases: new RegExp(q.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i") },
+      ];
+    }
+    if (req.query.source) filter.source = String(req.query.source);
+    const items = await Landmark.find(filter)
+      .sort({ updatedAt: -1 })
+      .limit(50)
+      .lean();
+    res.json({ items });
+  });
+
+  router.patch("/landmarks/:id", async (req, res) => {
+    const lm = await Landmark.findById(req.params.id);
+    if (!lm) return res.status(404).json({ error: "Not found" });
+    if (req.body?.disabled !== undefined) {
+      lm.disabled = Boolean(req.body.disabled);
+    }
+    if (typeof req.body?.alias === "string" && req.body.alias.trim()) {
+      const alias = req.body.alias.trim().slice(0, 120);
+      if (!lm.aliases.some((a) => a.toLowerCase() === alias.toLowerCase())) {
+        lm.aliases = [...(lm.aliases || []), alias];
+      }
+    }
+    await lm.save();
+    invalidateLandmarkCache();
+    res.json({ landmark: lm.toObject() });
   });
 
   router.get("/cases/:ref/photos/:fileId", async (req, res) => {

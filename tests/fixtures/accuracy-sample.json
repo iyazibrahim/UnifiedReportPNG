@@ -1,0 +1,42 @@
+[
+  {
+    "text": "tong sampah penuh depan 7-eleven komtar",
+    "expectedCategoryId": "kebersihan"
+  },
+  {
+    "text": "jalan berlubang besar dekat padang kota",
+    "expectedCategoryId": "jalan"
+  },
+  {
+    "text": "paip bocor air kotor",
+    "expectedCategoryId": "bekalan_air"
+  },
+  {
+    "text": "lampu isyarat rosak butterworth",
+    "expectedCategoryId": "lampu_isyarat"
+  },
+  {
+    "text": "longkang tersumbat taman sri nibong",
+    "expectedCategoryId": "longkang_lokal"
+  },
+  {
+    "text": "banjir besar saliran utama",
+    "expectedCategoryId": "banjir"
+  },
+  {
+    "text": "pokok tumbang menutup jalan",
+    "expectedCategoryId": "pokok"
+  },
+  {
+    "text": "binaan haram premis tanpa lesen",
+    "expectedCategoryId": "binaan_haram"
+  },
+  {
+    "text": "sampah bertimbun di longkang",
+    "expectedCategoryId": "kebersihan"
+  },
+  {
+    "text": "tiang lampu jalan rosak",
+    "expectedCategoryId": "lampu_jalan"
+  }
+]

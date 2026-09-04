@@ -131,6 +131,7 @@ export function landmarkToPlaceHit(landmark, method = "landmark_db") {
     category: landmark.category,
     method,
     score: landmark.score,
+    landmarkId: landmark._id ? String(landmark._id) : null,
     raw: landmark,
   };
 }

@@ -13,6 +13,7 @@ export function emptyDraft() {
     pendingStreetCandidates: null,
     pendingStreetRaw: null,
     pendingStreetBest: null,
+    pendingCategoryCandidates: null,
   };
 }
 
@@ -209,6 +210,11 @@ export const MSG = {
     ].join("\n"),
 
   streetPickOther: "Pilih jalan yang betul:",
+
+  clarifyCategory: [
+    "Kami kurang pasti kategori aduan anda.",
+    "Sila pilih kategori yang paling hampir:",
+  ].join("\n"),
 };
 
 export function formatConfirmMessage(location) {

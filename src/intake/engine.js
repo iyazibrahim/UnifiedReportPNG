@@ -54,7 +54,17 @@ import {
   streetConfirmButtons,
   streetPickButtons,
   submitButtons,
+  categoryClarifyButtons,
 } from "./buttons.js";
+import { CATEGORIES } from "../jurisdiction/categories.js";
+import { learnLandmarkFromConfirm } from "../location/learnPlace.js";
+import { learnStreetFromConfirm } from "../location/streetStore.js";
+import { ingestCaseKnowledge } from "../ai/ingest.js";
+import {
+  placeHintsFromChunks,
+  retrieveKnowledge,
+} from "../ai/retrieve.js";
+import { classifyByKeywords } from "../classify/keywords.js";
 
 export const MAX_PHOTOS = 5;
 
@@ -109,8 +119,103 @@ async function proceedToPreview(reply, session, config) {
     await reply.sendText(MSG.outsidePenang, { keyboard: "location" });
     return false;
   }
+  if (result.needsClarify) {
+    await reply.sendButtons(
+      MSG.clarifyCategory,
+      categoryClarifyButtons(result.candidates)
+    );
+    return true;
+  }
   await reply.sendButtons(previewMessage(session.draft), submitButtons());
   return true;
+}
+
+function buildClarifyCandidates(classification) {
+  const ids = [];
+  if (Array.isArray(classification.candidates)) {
+    for (const id of classification.candidates) {
+      if (CATEGORIES[id] && !ids.includes(id)) ids.push(id);
+    }
+  }
+  if (CATEGORIES[classification.categoryId] && !ids.includes(classification.categoryId)) {
+    ids.unshift(classification.categoryId);
+  }
+  try {
+    const kw = classifyByKeywords(classification._text || "");
+    if (CATEGORIES[kw.categoryId] && !ids.includes(kw.categoryId)) {
+      ids.push(kw.categoryId);
+    }
+  } catch {
+    // ignore
+  }
+  const fallbacks = ["kebersihan", "jalan", "bekalan_air", "lain_lain"];
+  for (const id of fallbacks) {
+    if (ids.length >= 3) break;
+    if (!ids.includes(id)) ids.push(id);
+  }
+  return ids.slice(0, 3);
+}
+
+async function lockCategoryAndPreview(reply, session, categoryId) {
+  const cat = CATEGORIES[categoryId] || CATEGORIES.lain_lain;
+  const loc = session.draft.location;
+  session.draft.classification = {
+    ...(session.draft.classification || {}),
+    categoryId: cat.id,
+    categoryLabel: cat.label,
+    confidence: 1,
+    method: "citizen_clarify",
+    needsClarify: false,
+  };
+  let jurisdiction = resolveJurisdiction({
+    categoryId: cat.id,
+    lat: loc.lat,
+    lng: loc.lng,
+    label: {
+      display_name: loc.display_name,
+      road: loc.road,
+    },
+  });
+  if (session.draft.forceTriage) {
+    jurisdiction = {
+      ...jurisdiction,
+      needsTriage: true,
+      reason: `${jurisdiction.reason} · Lokasi tidak pasti (mercu tanda teks) — perlu semakan ops.`,
+    };
+  }
+  session.draft.jurisdiction = jurisdiction;
+  session.step = "awaiting_submit";
+  await saveSession(session);
+  await reply.sendButtons(previewMessage(session.draft), submitButtons());
+}
+
+async function learnPlacesAfterConfirm(session) {
+  const loc = session.draft.location;
+  if (!loc?.confirmed) return;
+  try {
+    await learnLandmarkFromConfirm(loc, {
+      rawAlias: loc.landmark || session.draft.pendingPlaceText || null,
+    });
+  } catch {
+    // non-fatal
+  }
+}
+
+async function learnStreetAfterConfirm(session, { source } = {}) {
+  const loc = session.draft.location;
+  if (!loc?.road || !loc.road_confirmed) return;
+  try {
+    await learnStreetFromConfirm({
+      name: loc.road,
+      alias: loc.road_user_raw || null,
+      lat: loc.lat,
+      lng: loc.lng,
+      daerah: loc.daerah,
+      source: source || loc.road_source || "citizen_confirmed",
+    });
+  } catch {
+    // non-fatal
+  }
 }
 
 async function enrichLocationRoad(session, config) {
@@ -157,7 +262,8 @@ async function handleStreetInput(reply, session, config, text) {
     lng: loc.lng,
     daerah: loc.daerah,
     apiKey: config.openRouterKey,
-    model: config.openRouterModel,
+    model: config.openRouterModel || config.aiPrimaryModel,
+    strongModel: config.aiStrongModel,
     userAgent: config.nominatimUserAgent,
   });
   session.draft.pendingStreetRaw = raw;
@@ -204,8 +310,23 @@ async function classifyAndPreview(session, config) {
   }
   const classification = await classifyReport(session.draft.text, {
     apiKey: config.openRouterKey,
-    model: config.openRouterModel,
+    model: config.openRouterModel || config.aiPrimaryModel,
+    strongModel: config.aiStrongModel,
   });
+  if (classification.needsClarify) {
+    const candidates = buildClarifyCandidates({
+      ...classification,
+      _text: session.draft.text,
+    });
+    session.draft.classification = {
+      ...classification,
+      candidates,
+    };
+    session.draft.pendingCategoryCandidates = candidates;
+    session.step = "awaiting_category_clarify";
+    await saveSession(session);
+    return { rejected: false, needsClarify: true, candidates };
+  }
   let jurisdiction = resolveJurisdiction({
     categoryId: classification.categoryId,
     lat: loc.lat,
@@ -226,7 +347,7 @@ async function classifyAndPreview(session, config) {
   session.draft.jurisdiction = jurisdiction;
   session.step = "awaiting_submit";
   await saveSession(session);
-  return { rejected: false };
+  return { rejected: false, needsClarify: false };
 }
 
 async function rejectOutsidePenang(reply, session) {
@@ -298,7 +419,7 @@ async function ingestLocation(reply, session, config, locMsg, channel) {
   return true;
 }
 
-async function applyResolvedPlace(reply, session, placeText, hit) {
+async function applyResolvedPlace(reply, session, placeText, hit, config) {
   const gate = isAllowedPenangLocation(hit.lat, hit.lng);
   if (!gate.allowed) {
     await rejectOutsidePenang(reply, session);
@@ -318,6 +439,9 @@ async function applyResolvedPlace(reply, session, placeText, hit) {
   });
   let labeled = applyLabel(truth, hit);
   labeled.landmark = placeText;
+  if (hit.landmarkId || hit._id) {
+    labeled.landmarkId = String(hit.landmarkId || hit._id);
+  }
   labeled = enrichLocationMeta(labeled, {
     daerah: hit.daerah,
     placeName: hit.placeName,
@@ -326,7 +450,7 @@ async function applyResolvedPlace(reply, session, placeText, hit) {
   });
   try {
     const geocode = await reverseGeocode(labeled.lat, labeled.lng, {
-      userAgent: config.nominatimUserAgent,
+      userAgent: config?.nominatimUserAgent,
     });
     if (geocode?.road && !labeled.road) {
       labeled = applyLabel(labeled, geocode);
@@ -336,6 +460,7 @@ async function applyResolvedPlace(reply, session, placeText, hit) {
   }
   session.draft.location = labeled;
   session.draft.placeCandidates = null;
+  session.draft.pendingPlaceText = placeText;
   session.draft.geocodeFails = 0;
   session.draft.forceTriage = false;
   session.step = "awaiting_confirm";
@@ -352,10 +477,21 @@ async function applyResolvedPlace(reply, session, placeText, hit) {
 
 async function resolveTextPlace(reply, session, config, placeText) {
   await reply.sendText(MSG.locatingPlace);
+  let extraHints = [];
+  try {
+    const chunks = await retrieveKnowledge(placeText, {
+      apiKey: config.openRouterKey,
+    });
+    extraHints = placeHintsFromChunks(chunks);
+  } catch {
+    // optional
+  }
   const result = await resolveCitizenPlaceWithOptions(placeText, {
     apiKey: config.openRouterKey,
-    model: config.openRouterModel,
+    model: config.openRouterModel || config.aiPrimaryModel,
+    strongModel: config.aiStrongModel,
     userAgent: config.nominatimUserAgent,
+    extraHints,
   });
   if (!result.best || !Number.isFinite(result.best.lat) || !Number.isFinite(result.best.lng)) {
     session.draft.geocodeFails = (session.draft.geocodeFails || 0) + 1;
@@ -375,7 +511,7 @@ async function resolveTextPlace(reply, session, config, placeText) {
     await reply.sendButtons(MSG.placeDisambiguation, placePickButtons(result.candidates));
     return;
   }
-  await applyResolvedPlace(reply, session, placeText, result.best);
+  await applyResolvedPlace(reply, session, placeText, result.best, config);
 }
 
 async function handleButton(event, session, reply, config, gateway) {
@@ -434,7 +570,18 @@ async function handleButton(event, session, reply, config, gateway) {
       return;
     }
     await reply.answerCallback?.();
-    await applyResolvedPlace(reply, session, placeText, hit);
+    await applyResolvedPlace(reply, session, placeText, hit, config);
+    return;
+  }
+
+  if (id.startsWith(BUTTON.CAT_PICK_PREFIX)) {
+    const categoryId = id.slice(BUTTON.CAT_PICK_PREFIX.length);
+    if (!CATEGORIES[categoryId]) {
+      await reply.answerCallback?.({ text: "Kategori tidak sah" });
+      return;
+    }
+    await reply.answerCallback?.();
+    await lockCategoryAndPreview(reply, session, categoryId);
     return;
   }
 
@@ -452,13 +599,10 @@ async function handleButton(event, session, reply, config, gateway) {
       session.draft.location,
       "uncertain_text_geocode"
     );
-    const result = await classifyAndPreview(session, config);
+    await learnPlacesAfterConfirm(session);
+    await saveSession(session);
     await reply.answerCallback?.();
-    if (result.rejected) {
-      await reply.sendText(MSG.outsidePenang, { keyboard: "location" });
-      return;
-    }
-    await reply.sendButtons(previewMessage(session.draft), submitButtons());
+    await beginStreetFlow(reply, session, config);
     return;
   }
 
@@ -492,6 +636,7 @@ async function handleButton(event, session, reply, config, gateway) {
       session.draft.location,
       "button_yes"
     );
+    await learnPlacesAfterConfirm(session);
     await saveSession(session);
     await reply.answerCallback?.();
     await beginStreetFlow(reply, session, config);
@@ -510,6 +655,7 @@ async function handleButton(event, session, reply, config, gateway) {
       road_source: "gps_detected",
       road_confirmed: true,
     });
+    await learnStreetAfterConfirm(session, { source: "gps_detected" });
     await saveSession(session);
     await reply.answerCallback?.();
     await proceedToPreview(reply, session, config);
@@ -563,6 +709,7 @@ async function handleButton(event, session, reply, config, gateway) {
     });
     session.draft.pendingStreetCandidates = null;
     session.draft.pendingStreetBest = null;
+    await learnStreetAfterConfirm(session, { source: "ai_verified" });
     await saveSession(session);
     await reply.answerCallback?.();
     await proceedToPreview(reply, session, config);
@@ -617,6 +764,7 @@ async function handleButton(event, session, reply, config, gateway) {
     });
     session.draft.pendingStreetCandidates = null;
     session.draft.pendingStreetBest = null;
+    await learnStreetAfterConfirm(session, { source: "ai_verified" });
     await saveSession(session);
     await reply.answerCallback?.();
     await proceedToPreview(reply, session, config);
@@ -673,6 +821,13 @@ async function handleButton(event, session, reply, config, gateway) {
         draft: session.draft,
         dispatch,
       });
+      try {
+        await ingestCaseKnowledge(
+          typeof caseDoc.toObject === "function" ? caseDoc.toObject() : caseDoc
+        );
+      } catch {
+        // non-fatal RAG ingest
+      }
       markSubmitSuccess(channel, channelUserId);
       await resetSession(session);
       await reply.answerCallback?.();

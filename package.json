@@ -12,6 +12,7 @@
     "seed:landmarks": "node scripts/seed-landmarks.js",
     "seed:landmarks:file": "node scripts/seed-landmarks.js --from-file-only",
     "seed:landmarks:expand": "node scripts/expand-landmarks-seed.js",
+    "seed:streets": "node scripts/seed-streets.js",
     "fix:tickets": "node scripts/fix-duplicate-tickets.js",
     "fix:tickets:dry": "node scripts/fix-duplicate-tickets.js --dry-run"
   },

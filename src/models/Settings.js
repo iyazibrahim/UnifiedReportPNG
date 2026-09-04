@@ -8,6 +8,7 @@ const defaultToggles = () => ({
   nominatimEnabled: true,
   mockDispatchEnabled: true,
   abuseGuardsEnabled: true,
+  ragEnabled: true,
   pearl_mbpp: true,
   aspire_mbsp: true,
   myjalan: true,
@@ -21,6 +22,9 @@ const settingsSchema = new mongoose.Schema(
     toggles: { type: mongoose.Schema.Types.Mixed, default: defaultToggles },
     config: {
       openRouterModel: { type: String, default: "" },
+      aiPrimaryModel: { type: String, default: "" },
+      aiStrongModel: { type: String, default: "" },
+      aiEmbeddingModel: { type: String, default: "" },
       nominatimUserAgent: { type: String, default: "" },
       telegramWebhookUrl: { type: String, default: "" },
       publicBaseUrl: { type: String, default: "" },

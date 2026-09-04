@@ -1,3 +1,17 @@
+## RAG + AI model router (2026-09-04)
+
+- [x] Shared OpenRouter client (`src/ai/openRouter.js`) + confidence/failover router (`src/ai/router.js`)
+- [x] Settings: `aiPrimaryModel`, `aiStrongModel`, `aiEmbeddingModel`, toggle `ragEnabled`
+- [x] RAG: KnowledgeDoc / KnowledgeChunk, anonymized case + correction ingest, SOP upload (Settings → Knowledge)
+- [x] Classify uses retrieved chunks; persists `modelUsed` / `switched` / `switchReason`
+- [x] Low-confidence classify → one clarifying category question in intake FSM
+- [x] Admin `PATCH /api/admin/cases/:ref/classification` + reassign writes correction chunks
+- [x] Landmark live learn on citizen Ya (`source: citizen_confirmed` + aliases)
+- [x] Street Mongo DB: lookup before Nominatim; learn on GPS/AI street confirm; `npm run seed:streets`
+- [x] Eval fixture `tests/fixtures/accuracy-sample.json`
+
+---
+
 # OnePenang Dashboard — workflow
 
 ## Status

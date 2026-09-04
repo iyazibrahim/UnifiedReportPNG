@@ -18,6 +18,9 @@ const SECRET_KEYS = [
 
 const CONFIG_KEYS = [
   "openRouterModel",
+  "aiPrimaryModel",
+  "aiStrongModel",
+  "aiEmbeddingModel",
   "nominatimUserAgent",
   "telegramWebhookUrl",
   "publicBaseUrl",
@@ -39,6 +42,9 @@ const ENV_MAP = {
   publicBaseUrl: "PUBLIC_BASE_URL",
   openRouterApiKey: "OPENROUTER_API_KEY",
   openRouterModel: "OPENROUTER_MODEL",
+  aiPrimaryModel: "AI_PRIMARY_MODEL",
+  aiStrongModel: "AI_STRONG_MODEL",
+  aiEmbeddingModel: "AI_EMBEDDING_MODEL",
   nominatimUserAgent: "NOMINATIM_USER_AGENT",
   telegramWebhookUrl: "TELEGRAM_WEBHOOK_URL",
   mockPortalPin: "MOCK_PORTAL_PIN",
@@ -216,11 +222,15 @@ export async function getResolvedRuntime(env = process.env) {
   const config = {};
   for (const key of CONFIG_KEYS) {
     const fallback =
-      key === "openRouterModel"
+      key === "openRouterModel" || key === "aiPrimaryModel"
         ? "openai/gpt-4o-mini"
-        : key === "nominatimUserAgent"
-          ? "UnifiedReportPenang/1.0"
-          : "";
+        : key === "aiStrongModel"
+          ? "openai/gpt-4o"
+          : key === "aiEmbeddingModel"
+            ? "openai/text-embedding-3-small"
+            : key === "nominatimUserAgent"
+              ? "UnifiedReportPenang/1.0"
+              : "";
     config[key] = await resolveConfig(key, env, fallback);
   }
   return {
